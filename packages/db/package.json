@@ -1,0 +1,49 @@
+{
+  "name": "@repo/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schema": {
+      "types": "./dist/schema/index.d.ts",
+      "import": "./dist/schema/index.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    }
+  },
+  "scripts": {
+    "prebuild": "rimraf dist tsconfig.tsbuildinfo",
+    "build": "tsc --build --verbose",
+    "dev": "tsc --build --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "drizzle-orm": "^0.44.7",
+    "drizzle-zod": "0.8.3",
+    "zod": "^4.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.3",
+    "drizzle-kit": "^0.31.8",
+    "postgres": "^3.4.7",
+    "rimraf": "^6.1.2",
+    "typescript": "^5.9.3"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
