@@ -8,99 +8,124 @@ Full-stack TypeScript monorepo. Hono backend, React frontend, PostgreSQL.
 |-------|------|
 | Backend | Hono, Drizzle ORM, better-auth, Zod, Pino |
 | Frontend | React 19, TanStack Router, TanStack Query, Tailwind v4 |
-| Database | PostgreSQL |
-| Tooling | pnpm, Biome, Vitest |
+| Database | PostgreSQL, Redis (optional) |
+| Tooling | pnpm, Biome, Vitest, GitHub Actions |
 
 ## Quick Start
 
 ```bash
-# Prerequisites: Node 20+, pnpm, PostgreSQL
+# Prerequisites: Node 20+, pnpm
 
-# Setup
 pnpm setup                    # Install deps + create .env
-
-# Configure database in .env, then:
-docker compose up -d          # Or use existing PostgreSQL
-pnpm db:migrate
-
-# Run
+docker compose up -d          # Start PostgreSQL + Redis
+pnpm db:migrate               # Apply migrations
 pnpm dev                      # Backend :9999, Frontend :5173
 ```
 
 ## Commands
 
 ```bash
+# Development
 pnpm dev              # Start all
+pnpm dev:backend      # Backend only
+pnpm dev:frontend     # Frontend only
+
+# Build & Quality
 pnpm build            # Build all
 pnpm typecheck        # Type check
 pnpm lint             # Lint
 pnpm test             # Test
 
+# Database
 pnpm db:migrate       # Apply migrations
 pnpm db:generate      # Generate migration
-pnpm db:studio        # Open Drizzle Studio
+pnpm db:studio        # Drizzle Studio
 
-pnpm new:module NAME  # Scaffold new backend module
+# Jobs
+pnpm --filter backend jobs    # Run background workers
+
+# Generators
+pnpm new:module NAME  # Scaffold backend module
 ```
 
-## Structure
+## Batteries Included
+
+### File Uploads (S3/R2)
+```typescript
+import { getUploadUrl, getDownloadUrl } from "@/lib/storage";
+
+const uploadUrl = await getUploadUrl({ key: "uploads/file.pdf" });
+```
+
+### WebSockets
+```typescript
+import { wsManager } from "@/lib/ws";
+
+wsManager.broadcast("room-1", { type: "message", data: "hello" });
+```
+
+### Rate Limiting
+```typescript
+import { rateLimit, authRateLimit } from "@/lib/rate-limit";
+
+app.use("/api/*", rateLimit({ max: 100 }));
+app.post("/api/auth/*", authRateLimit);
+```
+
+### Background Jobs
+```typescript
+import { addJob } from "@/jobs";
+
+await addJob("email", { to: "user@example.com", template: "welcome", data: {} });
+```
+
+## Project Structure
 
 ```
 apps/
-  backend/            # Hono API
+  backend/
     src/
-      modules/        # Feature modules (routes, handlers, use-cases)
-      lib/            # Utilities
-      middlewares/    # Auth, etc.
-  frontend/           # React SPA
+      modules/      # Feature modules
+      lib/          # Utilities (storage, ws, rate-limit, redis)
+      jobs/         # Background job workers
+      middlewares/
+  frontend/
     src/
-      routes/         # TanStack Router pages
-      lib/            # Utilities
+      routes/       # TanStack Router pages
+      lib/          # API client, auth
 
 packages/
-  db/                 # Drizzle schemas
-  shared/             # Shared types
-  email-templates/    # Email builders
+  db/               # Drizzle schemas
+  shared/           # Shared types
+  email-templates/  # Email builders
+
+docs/
+  DEPLOYMENT.md     # Deploy guide
 ```
 
-## Backend Architecture
+## Architecture
 
 ```
 Route → Handler → Use-Case → Repository → Database
 ```
 
-Use-cases return discriminated unions:
-
-```typescript
-type Result =
-  | { type: "CREATED"; data: User }
-  | { type: "EXISTS"; message: string };
-
-// Handler switches on result.type
-```
-
-See `apps/backend/docs/ARCHITECTURE.md`.
-
-## Adding a Module
-
-```bash
-pnpm new:module posts
-```
-
-Then register in `apps/backend/src/routes/index.ts`.
+Use-cases return discriminated unions. See `apps/backend/docs/ARCHITECTURE.md`.
 
 ## Environment
 
-```bash
-# .env (backend)
-DATABASE_URL=postgres://user:pass@localhost:5432/db
-BETTER_AUTH_SECRET=<32+ chars>
-BETTER_AUTH_URL=http://localhost:9999
-FRONTEND_URL=http://localhost:5173
+See `.env.example` for all options. Required:
 
-# apps/frontend/.env
-VITE_API_URL=http://localhost:9999
+```bash
+DATABASE_URL=postgres://...
+BETTER_AUTH_SECRET=<32+ chars>
 ```
+
+## Deploy
+
+- **Backend**: Docker or PM2 on VPS
+- **Frontend**: Vercel
+
+See `docs/DEPLOYMENT.md`.
 
 ## License
 

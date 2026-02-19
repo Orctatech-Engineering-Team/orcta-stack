@@ -2,7 +2,6 @@ import { config } from "dotenv";
 import { expand } from "dotenv-expand";
 import { z } from "zod";
 
-// Load .env files
 expand(config());
 
 const envSchema = z.object({
@@ -21,7 +20,17 @@ const envSchema = z.object({
   SERVER_URL: z.string().url().default("http://localhost:9999"),
   FRONTEND_URL: z.string().url().default("http://localhost:5173"),
 
-  // Optional services
+  // Redis (optional - for jobs, rate limiting, caching)
+  REDIS_URL: z.string().optional(),
+
+  // S3/R2 Storage (optional)
+  S3_ENDPOINT: z.string().optional(),
+  S3_REGION: z.string().optional(),
+  S3_BUCKET: z.string().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+
+  // Email
   RESEND_API_KEY: z.string().optional(),
 });
 
@@ -29,16 +38,13 @@ export type Env = z.infer<typeof envSchema>;
 
 function parseEnv(): Env {
   const parsed = envSchema.safeParse(process.env);
-
   if (!parsed.success) {
     console.error("❌ Invalid environment variables:");
     console.error(parsed.error.flatten().fieldErrors);
     process.exit(1);
   }
-
   return parsed.data;
 }
 
 const env = parseEnv();
-
 export default env;
