@@ -1,10 +1,21 @@
-// Common types shared between frontend and backend
-
-export interface Timestamps {
-  createdAt: Date;
-  updatedAt: Date;
+// API Response Types
+export interface ApiSuccess<T> {
+  success: true;
+  data: T;
 }
 
+export interface ApiError {
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    details?: Record<string, unknown>;
+  };
+}
+
+export type ApiResponse<T> = ApiSuccess<T> | ApiError;
+
+// Pagination
 export interface PaginationParams {
   page?: number;
   limit?: number;
@@ -17,30 +28,9 @@ export interface PaginationMeta {
   limit: number;
   total: number;
   totalPages: number;
-  hasMore: boolean;
 }
 
-// API response wrappers
-export interface SuccessResponse<T> {
-  success: true;
-  data: T;
-  meta?: Record<string, unknown>;
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: PaginationMeta;
 }
-
-export interface ErrorResponse {
-  success: false;
-  error: {
-    code: string;
-    message: string;
-    details?: Record<string, unknown>;
-  };
-}
-
-export type ApiResponse<T> = SuccessResponse<T> | ErrorResponse;
-
-// Utility types
-export type Nullable<T> = T | null;
-export type Optional<T> = T | undefined;
-
-// Environment
-export type Environment = "development" | "staging" | "production";

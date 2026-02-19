@@ -1,71 +1,43 @@
-// Email template types and builders
-
 export interface EmailTemplate {
   subject: string;
   html: string;
-  text?: string;
+  text: string;
 }
 
-export interface WelcomeEmailProps {
+interface EmailProps {
   name: string;
-  verifyUrl?: string;
+  actionUrl?: string;
 }
 
-export interface PasswordResetEmailProps {
-  name: string;
-  resetUrl: string;
-  expiresIn: string;
+function baseTemplate(title: string, body: string): string {
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="font-family:system-ui,sans-serif;padding:24px;max-width:600px;margin:0 auto">
+<h1 style="font-size:24px;margin-bottom:16px">${title}</h1>
+${body}
+<p style="margin-top:24px;color:#666">— The Team</p>
+</body></html>`;
 }
 
-// Simple template builders (you can swap these for React Email later)
+export function welcomeEmail({ name, actionUrl }: EmailProps): EmailTemplate {
+  const button = actionUrl
+    ? `<p><a href="${actionUrl}" style="display:inline-block;background:#000;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px">Verify Email</a></p>`
+    : "";
 
-export function welcomeEmail({ name, verifyUrl }: WelcomeEmailProps): EmailTemplate {
-  const subject = `Welcome to Orcta Stack, ${name}!`;
-
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px;">
-        <h1>Welcome, ${name}!</h1>
-        <p>Thanks for signing up. We're excited to have you on board.</p>
-        ${verifyUrl ? `<p><a href="${verifyUrl}" style="background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Verify Email</a></p>` : ""}
-        <p>Best regards,<br>The Team</p>
-      </body>
-    </html>
-  `;
-
-  const text = `Welcome, ${name}!\n\nThanks for signing up. We're excited to have you on board.\n\n${verifyUrl ? `Verify your email: ${verifyUrl}\n\n` : ""}Best regards,\nThe Team`;
-
-  return { subject, html, text };
+  return {
+    subject: `Welcome, ${name}!`,
+    html: baseTemplate(`Welcome, ${name}!`, `<p>Thanks for signing up.</p>${button}`),
+    text: `Welcome, ${name}!\n\nThanks for signing up.${actionUrl ? `\n\nVerify: ${actionUrl}` : ""}\n\n— The Team`,
+  };
 }
 
-export function passwordResetEmail({ name, resetUrl, expiresIn }: PasswordResetEmailProps): EmailTemplate {
-  const subject = "Reset Your Password";
-
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px;">
-        <h1>Password Reset Request</h1>
-        <p>Hi ${name},</p>
-        <p>We received a request to reset your password. Click the button below to set a new password:</p>
-        <p><a href="${resetUrl}" style="background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Reset Password</a></p>
-        <p>This link will expire in ${expiresIn}.</p>
-        <p>If you didn't request this, you can safely ignore this email.</p>
-        <p>Best regards,<br>The Team</p>
-      </body>
-    </html>
-  `;
-
-  const text = `Password Reset Request\n\nHi ${name},\n\nWe received a request to reset your password. Use this link to set a new password:\n${resetUrl}\n\nThis link will expire in ${expiresIn}.\n\nIf you didn't request this, you can safely ignore this email.\n\nBest regards,\nThe Team`;
-
-  return { subject, html, text };
+export function passwordResetEmail({ name, actionUrl }: EmailProps): EmailTemplate {
+  return {
+    subject: "Reset your password",
+    html: baseTemplate("Reset your password", `
+      <p>Hi ${name}, click below to reset your password. Link expires in 1 hour.</p>
+      <p><a href="${actionUrl}" style="display:inline-block;background:#000;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px">Reset Password</a></p>
+    `),
+    text: `Hi ${name},\n\nReset your password: ${actionUrl}\n\nLink expires in 1 hour.\n\n— The Team`,
+  };
 }

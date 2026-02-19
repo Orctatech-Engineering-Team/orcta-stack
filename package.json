@@ -5,28 +5,24 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "setup": "./scripts/setup.sh",
     "dev": "pnpm build:packages && pnpm --parallel --filter \"./apps/*\" dev",
     "dev:backend": "pnpm build:packages && pnpm --filter backend dev",
     "dev:frontend": "pnpm build:packages && pnpm --filter frontend dev",
+    "build": "pnpm build:packages && pnpm build:apps",
     "build:packages": "pnpm -r --filter \"@repo/*\" build",
     "build:apps": "pnpm -r --filter ./apps/frontend build",
-    "build": "pnpm build:packages && pnpm build:apps",
-    "build:backend": "pnpm build:packages && pnpm --filter backend build",
-    "build:frontend": "pnpm build:packages && pnpm --filter frontend build",
     "typecheck": "pnpm --recursive typecheck",
-    "typecheck:packages": "pnpm --filter \"@repo/*\" typecheck",
-    "typecheck:apps": "pnpm --filter \"./apps/*\" typecheck",
     "lint": "pnpm --recursive lint",
     "test": "pnpm --recursive test",
-    "clean": "pnpm --recursive clean && pnpm clean:dist",
-    "clean:dist": "rm -rf apps/*/dist packages/*/dist",
-    "db:generate": "pnpm --filter @repo/db db:generate",
-    "db:migrate": "pnpm --filter @repo/db db:migrate",
-    "db:studio": "pnpm --filter @repo/db db:studio"
+    "clean": "rm -rf apps/*/dist packages/*/dist node_modules/.cache",
+    "db:generate": "pnpm --filter backend db:generate",
+    "db:migrate": "pnpm --filter backend db:migrate",
+    "db:studio": "pnpm --filter backend db:studio",
+    "new:module": "./scripts/new-module.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.7",
-    "@faker-js/faker": "^10.2.0",
     "@types/node": "^25.0.3",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
@@ -36,5 +32,6 @@
   },
   "engines": {
     "node": ">=20.0.0"
-  }
+  },
+  "packageManager": "pnpm@9.15.0"
 }

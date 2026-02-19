@@ -1,84 +1,68 @@
 # Backend Architecture
 
-## Overview
-
-This backend follows Clean Architecture principles with Hono as the web framework.
+## Layer Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         HTTP Layer                              │
-│  routes.ts → handlers.ts                                        │
-│  (OpenAPI)    (maps results to HTTP responses)                  │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      Application Layer                          │
-│  usecases/*.usecase.ts                                          │
-│  (orchestrates business logic, returns discriminated unions)    │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   Infrastructure Layer                          │
-│  *.repo.port.ts → *.repo.drizzle.ts                             │
-│  (interface)       (implementation)                             │
-└─────────────────────────────────────────────────────────────────┘
+HTTP Layer: routes.ts → handlers.ts
+                ↓
+Application:  usecases/*.usecase.ts
+                ↓
+Infrastructure: *.repo.port.ts → *.repo.drizzle.ts
+                ↓
+Database:     Drizzle ORM
 ```
 
-## Module Structure
-
-Each feature module follows this structure:
-
-```
-modules/{feature}/
-├── index.ts                    # Router wiring
-├── routes.ts                   # OpenAPI route definitions
-├── handlers.ts                 # HTTP handlers
-├── {feature}.repo.port.ts      # Repository interface
-├── {feature}.repo.drizzle.ts   # Repository implementation
-└── usecases/
-    ├── create-{feature}.usecase.ts
-    ├── get-{feature}.usecase.ts
-    └── ...
-```
-
-## Key Patterns
-
-### 1. Discriminated Unions
+## Key Pattern: Discriminated Unions
 
 Use-cases return explicit outcomes instead of throwing exceptions:
 
 ```typescript
+// Define possible outcomes
 type CreateUserResult =
   | { type: "CREATED"; user: User }
-  | { type: "EMAIL_EXISTS"; message: string }
-  | { type: "VALIDATION_ERROR"; errors: string[] };
+  | { type: "EMAIL_EXISTS"; message: string };
 
+// Use-case returns one of these
 async function createUserUseCase(deps, input): Promise<CreateUserResult> {
-  // Returns explicit outcomes
+  const existing = await deps.userRepo.findByEmail(input.email);
+  if (existing) {
+    return { type: "EMAIL_EXISTS", message: "Email taken" };
+  }
+  const user = await deps.userRepo.insert(input);
+  return { type: "CREATED", user };
+}
+
+// Handler maps to HTTP
+switch (result.type) {
+  case "CREATED":
+    return c.json(success(result.user), 201);
+  case "EMAIL_EXISTS":
+    return c.json(failure({ code: "EMAIL_EXISTS", message: result.message }), 409);
 }
 ```
 
-### 2. Dependency Injection
+**Why?**
+- TypeScript enforces exhaustive handling
+- No hidden control flow
+- Self-documenting outcomes
+
+## Dependency Injection
 
 Use-cases receive dependencies as parameters:
 
 ```typescript
 interface CreateUserDeps {
-  userRepo: UserRepo;
-  sendEmail: (to: string, template: EmailTemplate) => Promise<void>;
+  userRepo: Pick<UserRepo, "findByEmail" | "insert">;
 }
 
-async function createUserUseCase(
-  deps: CreateUserDeps,
-  input: CreateUserInput
-): Promise<CreateUserResult> {
-  // Use deps.userRepo, deps.sendEmail
+async function createUserUseCase(deps: CreateUserDeps, input: CreateUserInput) {
+  // Use deps.userRepo
 }
 ```
 
-### 3. Repository Pattern
+This enables easy mocking in tests.
+
+## Repository Pattern
 
 Separate interface from implementation:
 
@@ -86,7 +70,7 @@ Separate interface from implementation:
 // user.repo.port.ts
 interface UserRepo {
   findByEmail(email: string): Promise<User | undefined>;
-  insert(user: InsertUser): Promise<User>;
+  insert(data: InsertUser): Promise<User>;
 }
 
 // user.repo.drizzle.ts
@@ -94,28 +78,31 @@ export const userRepo: UserRepo = {
   async findByEmail(email) {
     return db.query.users.findFirst({ where: eq(users.email, email) });
   },
-  async insert(user) {
-    const [created] = await db.insert(users).values(user).returning();
-    return created;
+  async insert(data) {
+    const [user] = await db.insert(users).values(data).returning();
+    return user;
   },
 };
 ```
 
-## File Naming Conventions
+## Module Structure
 
-- `*.usecase.ts` - Application logic
-- `*.repo.port.ts` - Repository interface
-- `*.repo.drizzle.ts` - Drizzle implementation
-- `routes.ts` - OpenAPI route definitions
-- `handlers.ts` - HTTP handlers
+```
+modules/{feature}/
+├── routes.ts           # OpenAPI definitions
+├── handlers.ts         # HTTP → use-case → HTTP
+├── index.ts            # Router wiring
+├── {feature}.repo.port.ts
+├── {feature}.repo.drizzle.ts
+└── usecases/
+    └── create-{feature}.usecase.ts
+```
 
-## Creating a New Module
+## Creating a Module
 
-1. Create the module directory: `modules/{feature}/`
-2. Define routes with OpenAPI schemas in `routes.ts`
-3. Create repository interface in `{feature}.repo.port.ts`
-4. Implement repository in `{feature}.repo.drizzle.ts`
-5. Write use-cases with discriminated unions
-6. Create handlers that map results to HTTP responses
-7. Wire everything in `index.ts`
-8. Register in `routes/index.ts`
+1. Run `pnpm new:module {name}`
+2. Define routes with Zod schemas
+3. Create repository interface + implementation
+4. Write use-cases with discriminated unions
+5. Wire handlers
+6. Register in `routes/index.ts`

@@ -1,197 +1,104 @@
 # Orcta Stack
 
-A modern full-stack TypeScript monorepo template with clean architecture patterns.
+Full-stack TypeScript monorepo. Hono backend, React frontend, PostgreSQL.
 
-## Tech Stack
+## Stack
 
-### Backend
-- **Framework**: [Hono](https://hono.dev/) - Fast web framework
-- **Database**: PostgreSQL with [Drizzle ORM](https://orm.drizzle.team/)
-- **Auth**: [better-auth](https://better-auth.com/) - Modern authentication
-- **Validation**: [Zod](https://zod.dev/) - TypeScript-first schemas
-- **Docs**: OpenAPI with [Scalar](https://scalar.com/)
-- **Logging**: Pino
+| Layer | Tech |
+|-------|------|
+| Backend | Hono, Drizzle ORM, better-auth, Zod, Pino |
+| Frontend | React 19, TanStack Router, TanStack Query, Tailwind v4 |
+| Database | PostgreSQL |
+| Tooling | pnpm, Biome, Vitest |
 
-### Frontend
-- **Framework**: React 19
-- **Router**: [TanStack Router](https://tanstack.com/router) - Type-safe routing
-- **State**: [TanStack Query](https://tanstack.com/query) + [Zustand](https://zustand.docs.pmnd.rs/)
-- **Forms**: React Hook Form + Zod
-- **Styling**: Tailwind CSS v4
-- **UI**: Radix UI primitives
-
-### Shared Packages
-- `@repo/db` - Database schemas and types
-- `@repo/shared` - Shared types and validation schemas
-- `@repo/email-templates` - Email templates
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js >= 20
-- pnpm >= 9
-- PostgreSQL
-
-### Installation
+## Quick Start
 
 ```bash
-# Clone the template
-git clone https://github.com/your-org/orcta-stack.git my-app
-cd my-app
+# Prerequisites: Node 20+, pnpm, PostgreSQL
 
-# Install dependencies
-pnpm install
+# Setup
+pnpm setup                    # Install deps + create .env
 
-# Copy environment files
-cp .env.example .env
-cp apps/frontend/src/.env.example apps/frontend/src/.env
-
-# Update DATABASE_URL and other secrets in .env
-```
-
-### Database Setup
-
-```bash
-# Generate migrations
-pnpm db:generate
-
-# Apply migrations
+# Configure database in .env, then:
+docker compose up -d          # Or use existing PostgreSQL
 pnpm db:migrate
 
-# Open Drizzle Studio (optional)
-pnpm db:studio
+# Run
+pnpm dev                      # Backend :9999, Frontend :5173
 ```
 
-### Development
+## Commands
 
 ```bash
-# Start all apps (backend:9999, frontend:5173)
-pnpm dev
+pnpm dev              # Start all
+pnpm build            # Build all
+pnpm typecheck        # Type check
+pnpm lint             # Lint
+pnpm test             # Test
 
-# Or start individually
-pnpm dev:backend
-pnpm dev:frontend
+pnpm db:migrate       # Apply migrations
+pnpm db:generate      # Generate migration
+pnpm db:studio        # Open Drizzle Studio
+
+pnpm new:module NAME  # Scaffold new backend module
 ```
 
-### Build
-
-```bash
-# Build everything
-pnpm build
-
-# Type check
-pnpm typecheck
-
-# Lint
-pnpm lint
-```
-
-## Project Structure
+## Structure
 
 ```
-orcta-stack/
-├── apps/
-│   ├── backend/              # Hono API server
-│   │   ├── src/
-│   │   │   ├── db/           # Database connection
-│   │   │   ├── lib/          # Utilities (auth, error, types)
-│   │   │   ├── middlewares/  # Auth & other middlewares
-│   │   │   ├── modules/      # Feature modules
-│   │   │   │   └── health/   # Example module
-│   │   │   └── routes/       # Route aggregation
-│   │   └── docs/             # Architecture docs
-│   │
-│   └── frontend/             # React SPA
-│       └── src/
-│           ├── components/   # UI components
-│           ├── hooks/        # Custom hooks
-│           ├── lib/          # Utilities (api, auth)
-│           ├── routes/       # TanStack Router pages
-│           └── services/     # API services
-│
-└── packages/
-    ├── db/                   # Database schemas
-    ├── shared/               # Shared types & schemas
-    └── email-templates/      # Email templates
+apps/
+  backend/            # Hono API
+    src/
+      modules/        # Feature modules (routes, handlers, use-cases)
+      lib/            # Utilities
+      middlewares/    # Auth, etc.
+  frontend/           # React SPA
+    src/
+      routes/         # TanStack Router pages
+      lib/            # Utilities
+
+packages/
+  db/                 # Drizzle schemas
+  shared/             # Shared types
+  email-templates/    # Email builders
 ```
 
-## Architecture
-
-### Backend Clean Architecture
+## Backend Architecture
 
 ```
-Routes (OpenAPI + Zod validation)
-    ↓
-Handlers (map results to HTTP responses)
-    ↓
-Use-Cases (business logic, returns discriminated unions)
-    ↓
-Repositories (interface + implementation)
-    ↓
-Database (Drizzle ORM)
+Route → Handler → Use-Case → Repository → Database
 ```
 
-### Discriminated Unions
-
-Use-cases return explicit outcomes instead of throwing:
+Use-cases return discriminated unions:
 
 ```typescript
-type CreateUserResult =
-  | { type: "CREATED"; user: User }
-  | { type: "EMAIL_EXISTS"; message: string };
+type Result =
+  | { type: "CREATED"; data: User }
+  | { type: "EXISTS"; message: string };
 
-// Handler exhaustively switches
-switch (result.type) {
-  case "CREATED": return c.json(success(result.user), 201);
-  case "EMAIL_EXISTS": return c.json(failure(...), 409);
-}
+// Handler switches on result.type
 ```
 
-## Scripts
+See `apps/backend/docs/ARCHITECTURE.md`.
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start all apps in development |
-| `pnpm build` | Build all packages and apps |
-| `pnpm typecheck` | Type check all projects |
-| `pnpm lint` | Lint all projects |
-| `pnpm test` | Run tests |
-| `pnpm db:generate` | Generate database migrations |
-| `pnpm db:migrate` | Apply migrations |
-| `pnpm db:studio` | Open Drizzle Studio |
-
-## Adding a New Module
-
-1. Create module directory: `apps/backend/src/modules/{feature}/`
-2. Define routes with OpenAPI schemas in `routes.ts`
-3. Create repository interface in `{feature}.repo.port.ts`
-4. Implement repository in `{feature}.repo.drizzle.ts`
-5. Write use-cases with discriminated unions
-6. Create handlers that map results to HTTP responses
-7. Wire everything in `index.ts`
-8. Register in `routes/index.ts`
-
-See `apps/backend/docs/ARCHITECTURE.md` for details.
-
-## Environment Variables
-
-### Backend (.env)
+## Adding a Module
 
 ```bash
-NODE_ENV=development
-PORT=9999
-LOG_LEVEL=debug
-DATABASE_URL="postgres://user:pass@localhost:5432/db"
-BETTER_AUTH_SECRET=your-32-char-secret
+pnpm new:module posts
+```
+
+Then register in `apps/backend/src/routes/index.ts`.
+
+## Environment
+
+```bash
+# .env (backend)
+DATABASE_URL=postgres://user:pass@localhost:5432/db
+BETTER_AUTH_SECRET=<32+ chars>
 BETTER_AUTH_URL=http://localhost:9999
-SERVER_URL=http://localhost:9999
 FRONTEND_URL=http://localhost:5173
-```
 
-### Frontend (apps/frontend/src/.env)
-
-```bash
+# apps/frontend/.env
 VITE_API_URL=http://localhost:9999
 ```
 
