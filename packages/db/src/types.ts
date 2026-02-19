@@ -1,5 +1,5 @@
-import type { User, InsertUser } from "./schema/users";
-import type { Session, Account } from "./schema/sessions";
+import type { User, InsertUser } from "./schema/users.js";
+import type { Session, Account } from "./schema/sessions.js";
 
 // Re-export schema types
 export type { User, InsertUser, Session, Account };
