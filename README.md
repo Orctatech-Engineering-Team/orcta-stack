@@ -1,132 +1,198 @@
 # Orcta Stack
 
-Full-stack TypeScript monorepo. Hono backend, React frontend, PostgreSQL.
-
-## Stack
-
-| Layer | Tech |
-|-------|------|
-| Backend | Hono, Drizzle ORM, better-auth, Zod, Pino |
-| Frontend | React 19, TanStack Router, TanStack Query, Tailwind v4 |
-| Database | PostgreSQL, Redis (optional) |
-| Tooling | pnpm, Biome, Vitest, GitHub Actions |
-
-## Quick Start
+A production-ready TypeScript monorepo. Ship fast, sleep well.
 
 ```bash
-# Prerequisites: Node 20+, pnpm
-
-pnpm setup                    # Install deps + create .env
-docker compose up -d          # Start PostgreSQL + Redis
-pnpm db:migrate               # Apply migrations
-pnpm dev                      # Backend :9999, Frontend :5173
+pnpm setup && docker compose up -d && pnpm db:migrate && pnpm dev
 ```
 
-## Commands
+Backend runs on [localhost:9999](http://localhost:9999/docs). Frontend on [localhost:5173](http://localhost:5173).
+
+---
+
+## What's Inside
+
+**Backend** — Hono, Drizzle, PostgreSQL, better-auth
+**Frontend** — React 19, TanStack Router, Tailwind v4
+**Extras** — File uploads, WebSockets, background jobs, rate limiting
+
+---
+
+## Get Started
+
+You need Node 20+ and pnpm. That's it.
 
 ```bash
-# Development
-pnpm dev              # Start all
-pnpm dev:backend      # Backend only
-pnpm dev:frontend     # Frontend only
-
-# Build & Quality
-pnpm build            # Build all
-pnpm typecheck        # Type check
-pnpm lint             # Lint
-pnpm test             # Test
-
-# Database
-pnpm db:migrate       # Apply migrations
-pnpm db:generate      # Generate migration
-pnpm db:studio        # Drizzle Studio
-
-# Jobs
-pnpm --filter backend jobs    # Run background workers
-
-# Generators
-pnpm new:module NAME  # Scaffold backend module
+git clone <this-repo> my-app
+cd my-app
+pnpm setup
 ```
 
-## Batteries Included
+This installs dependencies and creates your `.env` file with a generated auth secret.
 
-### File Uploads (S3/R2)
+Start the database:
+
+```bash
+docker compose up -d    # Starts PostgreSQL + Redis
+pnpm db:migrate         # Creates tables
+```
+
+Run everything:
+
+```bash
+pnpm dev
+```
+
+Open [localhost:5173](http://localhost:5173). You're live.
+
+---
+
+## Daily Commands
+
+```bash
+pnpm dev                # Run everything
+pnpm test               # Run tests
+pnpm lint               # Check code
+pnpm typecheck          # Check types
+```
+
+---
+
+## Build Something
+
+### Add a Backend Module
+
+```bash
+pnpm new:module posts
+```
+
+This creates `apps/backend/src/modules/posts/` with routes, handlers, and a use-case template. Register it in `apps/backend/src/routes/index.ts`:
+
 ```typescript
-import { getUploadUrl, getDownloadUrl } from "@/lib/storage";
-
-const uploadUrl = await getUploadUrl({ key: "uploads/file.pdf" });
+import posts from "@/modules/posts";
+export const routes = [posts];
 ```
 
-### WebSockets
+### Add a Frontend Page
+
+Create `apps/frontend/src/routes/posts.tsx`:
+
+```tsx
+import { createFileRoute } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/posts")({
+  component: () => <div>Posts</div>,
+});
+```
+
+Done. TanStack Router handles the rest.
+
+### Add a Database Table
+
+Edit `packages/db/src/schema/` and run:
+
+```bash
+pnpm db:generate   # Creates migration
+pnpm db:migrate    # Applies it
+```
+
+---
+
+## Use the Batteries
+
+### Upload Files
+
+```typescript
+import { getUploadUrl, generateKey } from "@/lib/storage";
+
+// Generate presigned upload URL
+const key = generateKey("photo.jpg", "avatars");
+const url = await getUploadUrl({ key, contentType: "image/jpeg" });
+
+// Client uploads directly to S3/R2
+await fetch(url, { method: "PUT", body: file });
+```
+
+### Send Real-time Updates
+
 ```typescript
 import { wsManager } from "@/lib/ws";
 
-wsManager.broadcast("room-1", { type: "message", data: "hello" });
+// Send to everyone in a room
+wsManager.broadcast("notifications", { type: "new-message", data });
+
+// Send to a specific user
+wsManager.sendToUser(userId, { type: "alert", message: "Hey!" });
 ```
 
-### Rate Limiting
-```typescript
-import { rateLimit, authRateLimit } from "@/lib/rate-limit";
+### Queue Background Work
 
-app.use("/api/*", rateLimit({ max: 100 }));
-app.post("/api/auth/*", authRateLimit);
-```
-
-### Background Jobs
 ```typescript
 import { addJob } from "@/jobs";
 
-await addJob("email", { to: "user@example.com", template: "welcome", data: {} });
+await addJob("email", {
+  to: "user@example.com",
+  template: "welcome",
+  data: { name: "Alex" },
+});
 ```
 
-## Project Structure
+Run workers: `pnpm --filter backend jobs`
 
-```
-apps/
-  backend/
-    src/
-      modules/      # Feature modules
-      lib/          # Utilities (storage, ws, rate-limit, redis)
-      jobs/         # Background job workers
-      middlewares/
-  frontend/
-    src/
-      routes/       # TanStack Router pages
-      lib/          # API client, auth
+### Rate Limit Routes
 
-packages/
-  db/               # Drizzle schemas
-  shared/           # Shared types
-  email-templates/  # Email builders
+```typescript
+import { rateLimit, authRateLimit } from "@/lib/rate-limit";
 
-docs/
-  DEPLOYMENT.md     # Deploy guide
+// 100 requests per minute
+app.use("/api/*", rateLimit());
+
+// 5 attempts per 5 minutes (for login)
+app.post("/api/auth/login", authRateLimit, loginHandler);
 ```
 
-## Architecture
-
-```
-Route → Handler → Use-Case → Repository → Database
-```
-
-Use-cases return discriminated unions. See `apps/backend/docs/ARCHITECTURE.md`.
-
-## Environment
-
-See `.env.example` for all options. Required:
-
-```bash
-DATABASE_URL=postgres://...
-BETTER_AUTH_SECRET=<32+ chars>
-```
+---
 
 ## Deploy
 
-- **Backend**: Docker or PM2 on VPS
-- **Frontend**: Vercel
+**Backend** → Docker on any VPS, or Railway/Render
+**Frontend** → Vercel (zero config)
+**Database** → Supabase, Neon, or Railway
 
-See `docs/DEPLOYMENT.md`.
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the full guide.
+
+---
+
+## Project Layout
+
+```
+apps/backend/src/
+  modules/         ← Your features go here
+  lib/             ← Reusable utilities
+  jobs/            ← Background workers
+  middlewares/     ← Auth, etc.
+
+apps/frontend/src/
+  routes/          ← Pages (file-based routing)
+  lib/             ← API client, helpers
+  components/      ← UI components
+
+packages/
+  db/              ← Database schemas
+  shared/          ← Types shared everywhere
+  email-templates/ ← Email builders
+```
+
+---
+
+## Learn More
+
+- [Architecture Guide](apps/backend/docs/ARCHITECTURE.md) — How the backend is structured
+- [Deployment Guide](docs/DEPLOYMENT.md) — Ship to production
+- [API Docs](http://localhost:9999/docs) — Auto-generated from your code
+
+---
 
 ## License
 
-MIT
+MIT. Build whatever you want.
