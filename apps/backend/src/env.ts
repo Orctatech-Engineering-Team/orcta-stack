@@ -2,10 +2,13 @@ import { config } from "dotenv";
 import { expand } from "dotenv-expand";
 import { z } from "zod";
 
-expand(config());
+// Load environment-specific .env file first (e.g. .env.test), then fall back to .env.
+const nodeEnv = process.env.NODE_ENV ?? "development";
+expand(config({ path: `.env.${nodeEnv}`, override: false }));
+expand(config({ override: false }));
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
+  NODE_ENV: z.enum(["development", "staging", "production", "test"]).default("development"),
   PORT: z.coerce.number().default(9999),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 

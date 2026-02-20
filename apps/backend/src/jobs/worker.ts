@@ -5,65 +5,49 @@ import pino from "pino";
 
 const logger = pino({ name: "worker" });
 
-// Job processors
-const processors: {
-  [K in JobName]: (job: Job<JobData[K]>) => Promise<void>;
-} = {
-  async email(job) {
-    const { to, template, data } = job.data;
-    logger.info({ to, template }, "Processing email job");
-    // TODO: Implement email sending
-    // await sendEmail({ to, template, data });
-  },
+const processors: { [K in JobName]: (job: Job<JobData[K]>) => Promise<void> } =
+	{
+		async email(job) {
+			logger.info(
+				{ to: job.data.to, template: job.data.template },
+				"Processing email job",
+			);
+			// TODO: Implement email sending
+		},
+		async cleanup(job) {
+			logger.info(
+				{ olderThanDays: job.data.olderThanDays },
+				"Processing cleanup job",
+			);
+			// TODO: Implement cleanup logic
+		},
+		async sync(job) {
+			logger.info({ userId: job.data.userId }, "Processing sync job");
+			// TODO: Implement sync logic
+		},
+	};
 
-  async cleanup(job) {
-    const { olderThanDays } = job.data;
-    logger.info({ olderThanDays }, "Processing cleanup job");
-    // TODO: Implement cleanup logic
-  },
-
-  async sync(job) {
-    const { userId } = job.data;
-    logger.info({ userId }, "Processing sync job");
-    // TODO: Implement sync logic
-  },
-};
-
-// Create workers
 function startWorker<T extends JobName>(name: T) {
-  const worker = new Worker<JobData[T]>(
-    name,
-    async (job) => {
-      await processors[name](job as Job<JobData[T]>);
-    },
-    { connection: getRedis(), concurrency: 5 }
-  );
-
-  worker.on("completed", (job) => {
-    logger.info({ jobId: job.id, name }, "Job completed");
-  });
-
-  worker.on("failed", (job, err) => {
-    logger.error({ jobId: job?.id, name, error: err.message }, "Job failed");
-  });
-
-  return worker;
+	const worker = new Worker<JobData[T]>(
+		name,
+		(job) => processors[name](job as Job<JobData[T]>),
+		{ connection: getRedis() as any, concurrency: 5 },
+	);
+	worker.on("completed", (job) =>
+		logger.info({ jobId: job.id, name }, "Job completed"),
+	);
+	worker.on("failed", (job, err) =>
+		logger.error({ jobId: job?.id, name, error: err.message }, "Job failed"),
+	);
+	return worker;
 }
 
-// Start all workers
-logger.info("Starting workers...");
+const workers = (["email", "cleanup", "sync"] as JobName[]).map(startWorker);
 
-const workers = [
-  startWorker("email"),
-  startWorker("cleanup"),
-  startWorker("sync"),
-];
-
-// Graceful shutdown
 async function shutdown() {
-  logger.info("Shutting down workers...");
-  await Promise.all(workers.map((w) => w.close()));
-  process.exit(0);
+	logger.info("Shutting down workers...");
+	await Promise.all(workers.map((w) => w.close()));
+	process.exit(0);
 }
 
 process.on("SIGTERM", shutdown);

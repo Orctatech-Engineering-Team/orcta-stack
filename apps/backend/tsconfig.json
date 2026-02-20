@@ -1,25 +1,32 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "node16",
-    "outDir": "./dist",
-    "rootDir": "./src",
+    "target": "ESNext",
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"],
     },
-    "noEmit": true,
-    "composite": false,
-    "declaration": false,
-    "declarationMap": false
+    "typeRoots": ["./node_modules/@types"],
+    "types": ["node"],
+    "strict": true,
+    "outDir": "./dist",
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
   },
-  "include": [
-    "src/**/*"
+  "tsc-alias": {
+    "resolveFullPaths": true,
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["./src/*"],
+    },
+  },
+  "include": ["src", "globals.d.ts", "../../packages/db/seedCore.ts"],
+  "references": [
+    { "path": "../../packages/db" },
+    { "path": "../../packages/shared" },
   ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
 }

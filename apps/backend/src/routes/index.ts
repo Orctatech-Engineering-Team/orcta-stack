@@ -1,11 +1,11 @@
 import health from "@/modules/health";
+import users from "@/modules/users";
 
 // Public routes (no auth required)
 export const publicRoutes = [health];
 
-// Protected routes (auth required)
+// Protected routes (auth required — authMiddleware applied in app.ts)
 export const routes = [
-  // Add your protected routes here
-  // users,
-  // posts,
+	users,
+	// posts,
 ];
