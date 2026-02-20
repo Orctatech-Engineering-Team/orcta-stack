@@ -96,4 +96,4 @@ update code
 
 ## Questions?
 
-Open an issue. We'll help.
+Ask in the internal Slack channel or ping a team lead directly.

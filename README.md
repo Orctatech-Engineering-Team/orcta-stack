@@ -195,4 +195,6 @@ packages/
 
 ## License
 
-MIT. Build whatever you want.
+Proprietary. Copyright © 2026 Orcta. All rights reserved.
+
+This codebase is not open source. Do not distribute, sublicense, or use outside the organisation without written permission.
