@@ -31,6 +31,7 @@ function startWorker<T extends JobName>(name: T) {
 	const worker = new Worker<JobData[T]>(
 		name,
 		(job) => processors[name](job as Job<JobData[T]>),
+		// biome-ignore lint/suspicious/noExplicitAny: BullMQ accepts ioredis instances but types diverge
 		{ connection: getRedis() as any, concurrency: 5 },
 	);
 	worker.on("completed", (job) =>

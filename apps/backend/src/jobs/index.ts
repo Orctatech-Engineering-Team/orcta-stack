@@ -12,6 +12,7 @@ export interface JobData {
 
 // Create queues
 function createQueue<T extends JobName>(name: T) {
+	// biome-ignore lint/suspicious/noExplicitAny: BullMQ accepts ioredis instances but types diverge
 	return new Queue<JobData[T]>(name, { connection: getRedis() as any });
 }
 
@@ -49,7 +50,7 @@ export async function addJob<T extends JobName>(
 
 	const queue = queueMap[name];
 
-	return queue.add(name, data as any, {
+	return (queue as Queue<JobData[T]>).add(name, data, {
 		delay: options?.delay,
 		priority: options?.priority,
 		removeOnComplete: 100,
