@@ -128,58 +128,85 @@ function PostsPage() {
 ### Basic Form with Validation
 
 ```tsx
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 const schema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   content: z.string().min(10, "Content must be at least 10 characters"),
 });
 
-type FormData = z.infer<typeof schema>;
-
 function CreatePostForm({ onSuccess }: { onSuccess?: () => void }) {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<FormData>({
-    resolver: zodResolver(schema),
-  });
-
-  const mutation = useMutation({
-    mutationFn: (data: FormData) => api.post("/api/posts", data),
-    onSuccess: () => {
-      toast.success("Post created!");
-      reset();
-      onSuccess?.();
+  const form = useForm({
+    defaultValues: {
+      title: "",
+      content: "",
     },
-    onError: (error) => {
-      toast.error(error.message);
+    validators: {
+      onChange: schema,
+    },
+    onSubmit: async ({ value }) => {
+      try {
+        await api.post("/api/posts", value);
+        toast.success("Post created!");
+        form.reset();
+        onSuccess?.();
+      } catch (error) {
+        toast.error("Failed to create post");
+      }
     },
   });
 
   return (
-    <form onSubmit={handleSubmit((data) => mutation.mutate(data))}>
-      <div>
-        <label htmlFor="title">Title</label>
-        <input id="title" {...register("title")} />
-        {errors.title && <span className="text-red-500">{errors.title.message}</span>}
-      </div>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.handleSubmit();
+      }}
+    >
+      <form.Field name="title">
+        {(field) => (
+          <div>
+            <label htmlFor="title">Title</label>
+            <input
+              id="title"
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+              onBlur={field.handleBlur}
+            />
+            {field.state.meta.errors.length > 0 && (
+              <span className="text-red-500">{field.state.meta.errors.join(", ")}</span>
+            )}
+          </div>
+        )}
+      </form.Field>
 
-      <div>
-        <label htmlFor="content">Content</label>
-        <textarea id="content" {...register("content")} />
-        {errors.content && <span className="text-red-500">{errors.content.message}</span>}
-      </div>
+      <form.Field name="content">
+        {(field) => (
+          <div>
+            <label htmlFor="content">Content</label>
+            <textarea
+              id="content"
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+              onBlur={field.handleBlur}
+            />
+            {field.state.meta.errors.length > 0 && (
+              <span className="text-red-500">{field.state.meta.errors.join(", ")}</span>
+            )}
+          </div>
+        )}
+      </form.Field>
 
-      <button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Creating..." : "Create Post"}
-      </button>
+      <form.Subscribe selector={(state) => state.isSubmitting}>
+        {(isSubmitting) => (
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Creating..." : "Create Post"}
+          </button>
+        )}
+      </form.Subscribe>
     </form>
   );
 }
@@ -192,21 +219,16 @@ function EditPostForm({ post }: { post: Post }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting, isDirty },
-  } = useForm<FormData>({
-    resolver: zodResolver(schema),
+  const form = useForm({
     defaultValues: {
       title: post.title,
       content: post.content,
     },
-  });
-
-  const mutation = useMutation({
-    mutationFn: (data: FormData) => api.patch(`/api/posts/${post.id}`, data),
-    onSuccess: () => {
+    validators: {
+      onChange: schema,
+    },
+    onSubmit: async ({ value }) => {
+      await api.patch(`/api/posts/${post.id}`, value);
       queryClient.invalidateQueries({ queryKey: ["posts", post.id] });
       toast.success("Post updated!");
       navigate({ to: "/posts/$id", params: { id: post.id } });
@@ -214,20 +236,49 @@ function EditPostForm({ post }: { post: Post }) {
   });
 
   return (
-    <form onSubmit={handleSubmit((data) => mutation.mutate(data))}>
-      {/* ... form fields ... */}
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        form.handleSubmit();
+      }}
+    >
+      {/* ... form fields same pattern as above ... */}
 
-      <div className="flex gap-2">
-        <button type="submit" disabled={isSubmitting || !isDirty}>
-          {isSubmitting ? "Saving..." : "Save Changes"}
-        </button>
-        <button type="button" onClick={() => navigate({ to: ".." })}>
-          Cancel
-        </button>
-      </div>
+      <form.Subscribe selector={(state) => [state.isSubmitting, state.isDirty]}>
+        {([isSubmitting, isDirty]) => (
+          <div className="flex gap-2">
+            <button type="submit" disabled={isSubmitting || !isDirty}>
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </button>
+            <button type="button" onClick={() => navigate({ to: ".." })}>
+              Cancel
+            </button>
+          </div>
+        )}
+      </form.Subscribe>
     </form>
   );
 }
+```
+
+### Async Validation (e.g., Check Username Availability)
+
+```tsx
+const form = useForm({
+  defaultValues: { username: "" },
+  validators: {
+    onChange: z.object({
+      username: z.string().min(3),
+    }),
+    onChangeAsyncDebounceMs: 500,
+    onChangeAsync: async ({ value }) => {
+      const available = await api.get(`/api/check-username?q=${value.username}`);
+      if (!available) {
+        return { fields: { username: "Username already taken" } };
+      }
+    },
+  },
+});
 ```
 
 ---

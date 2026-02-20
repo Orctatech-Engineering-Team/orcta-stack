@@ -1,6 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
@@ -18,8 +17,6 @@ const registerSchema = z
     path: ["confirmPassword"],
   });
 
-type RegisterForm = z.infer<typeof registerSchema>;
-
 export const Route = createFileRoute("/register")({
   component: RegisterPage,
 });
@@ -28,36 +25,39 @@ function RegisterPage() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<RegisterForm>({
-    resolver: zodResolver(registerSchema),
-  });
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+    onSubmit: async ({ value }) => {
+      setIsLoading(true);
+      try {
+        const result = await authClient.signUp.email({
+          email: value.email,
+          password: value.password,
+          name: value.name,
+        });
 
-  const onSubmit = async (data: RegisterForm) => {
-    setIsLoading(true);
-    try {
-      const result = await authClient.signUp.email({
-        email: data.email,
-        password: data.password,
-        name: data.name,
-      });
+        if (result.error) {
+          toast.error(result.error.message);
+          return;
+        }
 
-      if (result.error) {
-        toast.error(result.error.message);
-        return;
+        toast.success("Account created successfully");
+        navigate({ to: "/dashboard" });
+      } catch {
+        toast.error("An error occurred");
+      } finally {
+        setIsLoading(false);
       }
-
-      toast.success("Account created successfully");
-      navigate({ to: "/dashboard" });
-    } catch {
-      toast.error("An error occurred");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    validators: {
+      onChange: registerSchema,
+    },
+  });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
@@ -67,87 +67,122 @@ function RegisterPage() {
           <p className="mt-2 text-gray-600">Get started with Orcta Stack</p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+          className="mt-8 space-y-6"
+        >
           <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="name"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Name
-              </label>
-              <input
-                {...register("name")}
-                type="text"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                placeholder="John Doe"
-              />
-              {errors.name && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.name.message}
-                </p>
+            <form.Field name="name">
+              {(field) => (
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Name
+                  </label>
+                  <input
+                    id="name"
+                    type="text"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="John Doe"
+                  />
+                  {field.state.meta.errors.length > 0 && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {field.state.meta.errors.join(", ")}
+                    </p>
+                  )}
+                </div>
               )}
-            </div>
+            </form.Field>
 
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Email
-              </label>
-              <input
-                {...register("email")}
-                type="email"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                placeholder="you@example.com"
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.email.message}
-                </p>
+            <form.Field name="email">
+              {(field) => (
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="you@example.com"
+                  />
+                  {field.state.meta.errors.length > 0 && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {field.state.meta.errors.join(", ")}
+                    </p>
+                  )}
+                </div>
               )}
-            </div>
+            </form.Field>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Password
-              </label>
-              <input
-                {...register("password")}
-                type="password"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                placeholder="••••••••"
-              />
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.password.message}
-                </p>
+            <form.Field name="password">
+              {(field) => (
+                <div>
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Password
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="••••••••"
+                  />
+                  {field.state.meta.errors.length > 0 && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {field.state.meta.errors.join(", ")}
+                    </p>
+                  )}
+                </div>
               )}
-            </div>
+            </form.Field>
 
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700"
-              >
-                Confirm Password
-              </label>
-              <input
-                {...register("confirmPassword")}
-                type="password"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                placeholder="••••••••"
-              />
-              {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.confirmPassword.message}
-                </p>
+            <form.Field name="confirmPassword">
+              {(field) => (
+                <div>
+                  <label
+                    htmlFor="confirmPassword"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Confirm Password
+                  </label>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="••••••••"
+                  />
+                  {field.state.meta.errors.length > 0 && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {field.state.meta.errors.join(", ")}
+                    </p>
+                  )}
+                </div>
               )}
-            </div>
+            </form.Field>
           </div>
 
           <button

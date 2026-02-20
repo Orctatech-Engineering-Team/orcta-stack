@@ -197,7 +197,7 @@ const toggleSidebar = useUIStore((s) => s.toggleSidebar);
 |------------|----------|
 | Server data | TanStack Query |
 | URL state | TanStack Router search params |
-| Form state | React Hook Form |
+| Form state | TanStack Form |
 | UI state (modals, sidebars) | Zustand |
 | Component-local state | useState |
 
@@ -209,43 +209,71 @@ const toggleSidebar = useUIStore((s) => s.toggleSidebar);
 
 ---
 
-## React Hook Form over Formik
+## TanStack Form over React Hook Form
 
-**Choice**: React Hook Form + Zod
+**Choice**: TanStack Form + Zod
 
 **Why**:
 
-1. **Uncontrolled by default** — Doesn't re-render on every keystroke. Fast even with large forms.
+1. **Full TanStack ecosystem** — Same patterns as Router and Query. Consistent mental model.
 
-2. **Zod integration** — Same schemas as backend. Validate once, use everywhere.
+2. **First-class TypeScript** — Types are inferred from your schema and form definition.
+
+3. **Framework agnostic** — Works with React, Vue, Solid. Learn once.
+
+4. **Zod integration** — Same schemas as backend. Validate once, use everywhere.
 
 ```typescript
-const schema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-});
-
-const { register, handleSubmit, formState: { errors } } = useForm({
-  resolver: zodResolver(schema),
+const form = useForm({
+  defaultValues: { email: "", password: "" },
+  validators: {
+    onChange: z.object({
+      email: z.string().email(),
+      password: z.string().min(8),
+    }),
+  },
+  onSubmit: async ({ value }) => {
+    await api.post("/login", value);
+  },
 });
 ```
 
-3. **Minimal re-renders** — Form state is ref-based. Only invalid fields re-render.
-
-4. **Great DX** — `register` is magical. Spread and done.
+5. **Field-level control** — Each field manages its own state and validation.
 
 ```tsx
-<input {...register("email")} />
-{errors.email && <span>{errors.email.message}</span>}
+<form.Field name="email">
+  {(field) => (
+    <div>
+      <input
+        value={field.state.value}
+        onChange={(e) => field.handleChange(e.target.value)}
+        onBlur={field.handleBlur}
+      />
+      {field.state.meta.errors.length > 0 && (
+        <span>{field.state.meta.errors.join(", ")}</span>
+      )}
+    </div>
+  )}
+</form.Field>
 ```
 
-5. **Composable** — Use with any UI library. No special form components.
+6. **Async validation** — Built-in support for server-side validation.
+
+```typescript
+validators: {
+  onChangeAsync: async ({ value }) => {
+    const exists = await checkEmailExists(value.email);
+    if (exists) return "Email already taken";
+  },
+  onChangeAsyncDebounceMs: 500,
+}
+```
 
 **Trade-offs**:
 
-- Uncontrolled model can be confusing
-- Complex validation logic can get messy
-- Less intuitive than controlled forms
+- More verbose than React Hook Form's `register`
+- Newer library, smaller community
+- Controlled by default (more re-renders, but predictable)
 
 ---
 
