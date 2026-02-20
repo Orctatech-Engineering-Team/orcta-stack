@@ -15,13 +15,46 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "recommended": true,
+      "a11y": {
+        "recommended": true,
+        "useButtonType": "error",
+        "useAltText": "error",
+        "useAnchorContent": "error",
+        "useHeadingContent": "error",
+        "useKeyWithClickEvents": "error",
+        "useKeyWithMouseEvents": "error",
+        "useValidAriaProps": "error",
+        "useValidAriaRole": "error",
+        "useValidAriaValues": "error",
+        "noAccessKey": "error",
+        "noAutofocus": "warn",
+        "noPositiveTabindex": "error",
+        "noRedundantAlt": "error",
+        "noRedundantRoles": "error",
+        "useFocusableInteractive": "error",
+        "useSemanticElements": "error"
+      },
+      "correctness": {
+        "recommended": true,
+        "useExhaustiveDependencies": "error",
+        "useHookAtTopLevel": "error"
+      },
+      "suspicious": {
+        "recommended": true,
+        "noExplicitAny": "warn"
+      },
+      "style": {
+        "recommended": true,
+        "noNonNullAssertion": "error"
+      }
     }
   },
   "javascript": {
     "formatter": {
       "quoteStyle": "double"
-    }
+    },
+    "globals": ["React"]
   },
   "assist": {
     "enabled": true,
@@ -30,5 +63,21 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx"],
+      "linter": {
+        "rules": {
+          "suspicious": { "noExplicitAny": "off" },
+          "style": { "noNonNullAssertion": "off" }
+        }
+      }
+    },
+    {
+      "includes": ["**/routeTree.gen.ts", "**/migrations/**"],
+      "linter": { "enabled": false },
+      "formatter": { "enabled": false }
+    }
+  ]
 }
