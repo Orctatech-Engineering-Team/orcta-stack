@@ -586,3 +586,81 @@ Only when the real thing cannot run in a test environment:
 - External webhooks or OAuth flows
 
 Do **not** mock the DB, Redis, or any infrastructure you can run locally.
+
+---
+
+## Observability — Enriching Wide Events
+
+Every request emits **one** structured JSON event (a "wide event" / canonical log line).
+`wideEventMiddleware` populates the base fields automatically; handlers add domain context.
+
+### Adding fields from a handler
+
+```typescript
+// apps/backend/src/modules/posts/handlers.ts
+import { addToEvent, jsonRes } from "@/lib/types";
+
+export const getPostHandler = factory.createHandlers(async (c) => {
+  const { id } = c.req.param();
+  const result = await getPost(id);
+
+  if (!result.ok) {
+    // Even on failure, annotate the event so queries in Axiom are trivial.
+    addToEvent(c, { outcome: "not_found", post_id: id });
+    return jsonRes(c, HTTP_STATUS.NOT_FOUND, { error: "Post not found" });
+  }
+
+  addToEvent(c, {
+    post_id: result.value.id,
+    author_id: result.value.authorId,
+  });
+  return jsonRes(c, HTTP_STATUS.OK, { data: result.value });
+});
+```
+
+The wide event emitted at the end of the request includes every field added via
+`addToEvent` throughout the entire middleware chain:
+
+```json
+{
+  "request_id": "01jd...",
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "method": "GET",
+  "path": "/api/posts/123",
+  "status_code": 200,
+  "duration_ms": 14,
+  "outcome": "success",
+  "service": "backend",
+  "service_version": "abc1234",
+  "region": "eu-central-1",
+  "user": { "id": "u_abc", "role": "user" },
+  "post_id": "p_123",
+  "author_id": "u_abc"
+}
+```
+
+### Sampling rules (applied before emit)
+
+| Condition | Sampled? |
+|---|---|
+| `status_code >= 500` | Always |
+| `outcome === "error"` | Always |
+| `duration_ms > 2000` | Always (slow requests) |
+| User role `admin` | Always |
+| Everything else | 5% random |
+
+Events that are dropped are never written to Axiom, so you stay within the free tier
+for normal traffic while retaining 100% of interesting signals.
+
+### Axiom setup
+
+1. Create a dataset in [Axiom](https://axiom.co) (e.g. `orcta-prod`).
+2. Generate an API token with **Ingest** permission.
+3. Set env vars in `.env.production`:
+   ```
+   AXIOM_TOKEN=xaat-...
+   AXIOM_DATASET=orcta-prod
+   SERVICE_VERSION=$(git rev-parse --short HEAD)
+   REGION=eu-central-1
+   ```
+4. No extra infrastructure — `@axiomhq/pino` streams directly from the process over HTTPS.
