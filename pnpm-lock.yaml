@@ -157,9 +157,6 @@ importers:
       '@better-fetch/fetch':
         specifier: ^1.1.18
         version: 1.1.21
-      '@hookform/resolvers':
-        specifier: ^5.2.2
-        version: 5.2.2(react-hook-form@7.71.1(react@19.2.4))
       '@radix-ui/react-avatar':
         specifier: ^1.1.11
         version: 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -193,6 +190,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.1.17
         version: 4.2.0(vite@7.3.1(@types/node@25.3.0)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2))
+      '@tanstack/react-form':
+        specifier: ^1.0.0
+        version: 1.28.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@tanstack/react-query':
         specifier: ^5.90.7
         version: 5.90.21(react@19.2.4)
@@ -220,9 +220,6 @@ importers:
       react-dom:
         specifier: ^19.1.1
         version: 19.2.4(react@19.2.4)
-      react-hook-form:
-        specifier: ^7.66.1
-        version: 7.71.1(react@19.2.4)
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -325,6 +322,9 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      vitest:
+        specifier: ^4.0.16
+        version: 4.0.18(@types/node@22.19.11)(@vitest/ui@4.0.18)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
 
   packages/shared:
     dependencies:
@@ -338,6 +338,9 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+      vitest:
+        specifier: ^4.0.16
+        version: 4.0.18(@types/node@25.3.0)(@vitest/ui@4.0.18)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
 
 packages:
 
@@ -1236,11 +1239,6 @@ packages:
     peerDependencies:
       hono: '>=3.9.0'
       zod: ^3.25.0 || ^4.0.0
-
-  '@hookform/resolvers@5.2.2':
-    resolution: {integrity: sha512-A/IxlMLShx3KjV/HeTcTfaMxdwy690+L/ZADoeaTltLx+CVuzkeVIPuybK3jrRfw7YZnmdKsVVHAlEPIAEUNlA==}
-    peerDependencies:
-      react-hook-form: ^7.55.0
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -2220,9 +2218,6 @@ packages:
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
-  '@standard-schema/utils@0.3.0':
-    resolution: {integrity: sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g==}
-
   '@swc/cli@0.7.10':
     resolution: {integrity: sha512-QQ36Q1VwGTT2YzvMeNe/j1x4DKS277DscNhWc57dIwQn//C+zAgvuSupMB/XkmYqPKQX+8hjn5/cHRJrMvWy0Q==}
     engines: {node: '>= 16.14.0'}
@@ -2403,12 +2398,32 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7
 
+  '@tanstack/devtools-event-client@0.4.0':
+    resolution: {integrity: sha512-RPfGuk2bDZgcu9bAJodvO2lnZeHuz4/71HjZ0bGb/SPg8+lyTA+RLSKQvo7fSmPSi8/vcH3aKQ8EM9ywf1olaw==}
+    engines: {node: '>=18'}
+
+  '@tanstack/form-core@1.28.3':
+    resolution: {integrity: sha512-DBhnu1d5VfACAYOAZJO8tsEUHjWczZMJY8v/YrtAJNWpwvL/3ogDuz8e6yUB2m/iVTNq6K8yrnVN2nrX0/BX/w==}
+
   '@tanstack/history@1.154.14':
     resolution: {integrity: sha512-xyIfof8eHBuub1CkBnbKNKQXeRZC4dClhmzePHVOEel4G7lk/dW+TQ16da7CFdeNLv6u6Owf5VoBQxoo6DFTSA==}
     engines: {node: '>=12'}
 
+  '@tanstack/pacer-lite@0.1.1':
+    resolution: {integrity: sha512-y/xtNPNt/YeyoVxE/JCx+T7yjEzpezmbb+toK8DDD1P4m7Kzs5YR956+7OKexG3f8aXgC3rLZl7b1V+yNUSy5w==}
+    engines: {node: '>=18'}
+
   '@tanstack/query-core@5.90.20':
     resolution: {integrity: sha512-OMD2HLpNouXEfZJWcKeVKUgQ5n+n3A2JFmBaScpNDUqSrQSjiveC7dKMe53uJUg1nDG16ttFPz2xfilz6i2uVg==}
+
+  '@tanstack/react-form@1.28.3':
+    resolution: {integrity: sha512-84yd0swZRcyC3Q46dYBH6bHf1tlIY1flchbdG3VwArg/wLVW5RdBenIrJhleHjk2OxXuF+9HoKQbHglJyWIXQA==}
+    peerDependencies:
+      '@tanstack/react-start': '*'
+      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      '@tanstack/react-start':
+        optional: true
 
   '@tanstack/react-query@5.90.21':
     resolution: {integrity: sha512-0Lu6y5t+tvlTJMTO7oh5NSpJfpg/5D41LlThfepTixPYkJ0sE2Jj0m0f6yYqujBwIXlId87e234+MxG3D3g7kg==}
@@ -3945,12 +3960,6 @@ packages:
     resolution: {integrity: sha512-AXJdLo8kgMbimY95O2aKQqsz2iWi9jMgKJhRBAxECE4IFxfcazB2LmzloIoibJI3C12IlY20+KFaLv+71bUJeQ==}
     peerDependencies:
       react: ^19.2.4
-
-  react-hook-form@7.71.1:
-    resolution: {integrity: sha512-9SUJKCGKo8HUSsCO+y0CtqkqI5nNuaDqTxyqPsZPqIwudpj4rCrAz/jZV+jn57bx5gtZKOh3neQu94DXMc+w5w==}
-    engines: {node: '>=18.0.0'}
-    peerDependencies:
-      react: ^16.8.0 || ^17 || ^18 || ^19
 
   react-refresh@0.18.0:
     resolution: {integrity: sha512-QgT5//D3jfjJb6Gsjxv0Slpj23ip+HtOpnNgnb2S5zU3CB26G/IDPGoy4RJB42wzFE46DRsstbW6tKHoKbhAxw==}
@@ -5578,11 +5587,6 @@ snapshots:
       hono: 4.12.0
       zod: 4.2.1
 
-  '@hookform/resolvers@5.2.2(react-hook-form@7.71.1(react@19.2.4))':
-    dependencies:
-      '@standard-schema/utils': 0.3.0
-      react-hook-form: 7.71.1(react@19.2.4)
-
   '@humanfs/core@0.19.1': {}
 
   '@humanfs/node@0.16.7':
@@ -6552,8 +6556,6 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@standard-schema/utils@0.3.0': {}
-
   '@swc/cli@0.7.10(@swc/core@1.15.11)':
     dependencies:
       '@swc/core': 1.15.11
@@ -6695,9 +6697,27 @@ snapshots:
       tailwindcss: 4.2.0
       vite: 7.3.1(@types/node@25.3.0)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
 
+  '@tanstack/devtools-event-client@0.4.0': {}
+
+  '@tanstack/form-core@1.28.3':
+    dependencies:
+      '@tanstack/devtools-event-client': 0.4.0
+      '@tanstack/pacer-lite': 0.1.1
+      '@tanstack/store': 0.8.1
+
   '@tanstack/history@1.154.14': {}
 
+  '@tanstack/pacer-lite@0.1.1': {}
+
   '@tanstack/query-core@5.90.20': {}
+
+  '@tanstack/react-form@1.28.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      '@tanstack/form-core': 1.28.3
+      '@tanstack/react-store': 0.8.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react: 19.2.4
+    transitivePeerDependencies:
+      - react-dom
 
   '@tanstack/react-query@5.90.21(react@19.2.4)':
     dependencies:
@@ -6989,6 +7009,14 @@ snapshots:
       magic-string: 0.30.21
     optionalDependencies:
       vite: 7.3.1(@types/node@22.19.11)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
+
+  '@vitest/mocker@4.0.18(vite@7.3.1(@types/node@25.3.0)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2))':
+    dependencies:
+      '@vitest/spy': 4.0.18
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 7.3.1(@types/node@25.3.0)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
 
   '@vitest/pretty-format@4.0.18':
     dependencies:
@@ -8245,10 +8273,6 @@ snapshots:
       react: 19.2.4
       scheduler: 0.27.0
 
-  react-hook-form@7.71.1(react@19.2.4):
-    dependencies:
-      react: 19.2.4
-
   react-refresh@0.18.0: {}
 
   react-remove-scroll-bar@2.3.8(@types/react@19.2.14)(react@19.2.4):
@@ -8715,6 +8739,44 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.19.11
+      '@vitest/ui': 4.0.18(vitest@4.0.18)
+    transitivePeerDependencies:
+      - jiti
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - terser
+      - tsx
+      - yaml
+
+  vitest@4.0.18(@types/node@25.3.0)(@vitest/ui@4.0.18)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2):
+    dependencies:
+      '@vitest/expect': 4.0.18
+      '@vitest/mocker': 4.0.18(vite@7.3.1(@types/node@25.3.0)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2))
+      '@vitest/pretty-format': 4.0.18
+      '@vitest/runner': 4.0.18
+      '@vitest/snapshot': 4.0.18
+      '@vitest/spy': 4.0.18
+      '@vitest/utils': 4.0.18
+      es-module-lexer: 1.7.0
+      expect-type: 1.3.0
+      magic-string: 0.30.21
+      obug: 2.1.1
+      pathe: 2.0.3
+      picomatch: 4.0.3
+      std-env: 3.10.0
+      tinybench: 2.9.0
+      tinyexec: 1.0.2
+      tinyglobby: 0.2.15
+      tinyrainbow: 3.0.3
+      vite: 7.3.1(@types/node@25.3.0)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 25.3.0
       '@vitest/ui': 4.0.18(vitest@4.0.18)
     transitivePeerDependencies:
       - jiti

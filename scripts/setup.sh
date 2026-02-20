@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Setting up Orcta Stack..."
+echo "Setting up Orcta Stack..."
 
 # Check prerequisites
 command -v node >/dev/null 2>&1 || { echo "❌ Node.js required"; exit 1; }
@@ -13,14 +13,14 @@ pnpm install
 
 # Setup environment files
 if [ ! -f .env ]; then
-  echo "📝 Creating .env file..."
+  echo "Creating .env file..."
   cp .env.example .env
 
   # Generate auth secret
   SECRET=$(openssl rand -base64 32 2>/dev/null || head -c 32 /dev/urandom | base64)
   sed -i.bak "s/your-better-auth-secret-min-32-chars/$SECRET/" .env && rm -f .env.bak
 
-  echo "⚠️  Update DATABASE_URL in .env before running migrations"
+  echo "Update DATABASE_URL in .env before running migrations"
 fi
 
 if [ ! -f apps/frontend/.env ]; then
