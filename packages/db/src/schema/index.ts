@@ -1,7 +1,7 @@
 // User & Auth schemas
-export * from "./users.js";
-export * from "./sessions.js";
+export * from "./users.ts";
+export * from "./sessions.ts";
 
 // Add your domain schemas here
-// export * from "./posts.js";
-// export * from "./comments.js";
+// export * from "./posts.ts";
+// export * from "./comments.ts";

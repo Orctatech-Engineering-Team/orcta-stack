@@ -1,8 +1,29 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src"
-  },
-  "include": ["src/**/*"]
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"baseUrl": ".",
+		"paths": {
+			"@repo/db": ["./src/index.ts"],
+			"@repo/db/schema": ["./src/schema/index.ts"],
+			"@repo/db/types": ["./src/types.ts"],
+			"@repo/db/dtos": ["./src/dtos/index.ts"]
+		},
+		"composite": true,
+		"declaration": true,
+		"declarationMap": true,
+		"module": "ESNext",
+		"moduleResolution": "node",
+		"target": "ES2022",
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"skipLibCheck": true,
+		"allowImportingTsExtensions": true,
+		"rewriteRelativeImportExtensions": true,
+		"noEmit": false,
+		"verbatimModuleSyntax": true
+	},
+	"include": ["src"],
+	"exclude": ["node_modules", "dist", "migrations"]
 }
