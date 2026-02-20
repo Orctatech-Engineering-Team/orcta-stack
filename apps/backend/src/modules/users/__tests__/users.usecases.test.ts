@@ -1,7 +1,8 @@
 // Unit tests for users use-cases.
 // Pure functions — no DB, no network, no mocks. Call with plain values.
-import { describe, it, expect } from "vitest";
+
 import type { User } from "@repo/db/schema";
+import { describe, expect, it } from "vitest";
 import { prepareEmailChange } from "../users.usecases";
 
 // ─── Fixture ─────────────────────────────────────────────────────────────────

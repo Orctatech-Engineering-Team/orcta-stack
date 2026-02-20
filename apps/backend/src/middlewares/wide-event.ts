@@ -1,8 +1,8 @@
 import type { Context, Next } from "hono";
 import { getLogger } from "hono-pino";
+import env from "@/env";
 import type { AppEnv } from "@/lib/create-app";
 import type { WideEvent } from "@/lib/types";
-import env from "@/env";
 
 // ─── Tail-based sampling ─────────────────────────────────────────────────────
 // Make the sampling decision AFTER the request completes, based on outcome.
@@ -20,7 +20,8 @@ function shouldSample(event: WideEvent): boolean {
 	if (event.user?.role === "admin") return true;
 	// Never drop requests annotated with feature_flags — critical during rollouts.
 	// Handlers set this via: addToEvent(c, { feature_flags: { flag_name: true } })
-	if (event.feature_flags && Object.keys(event.feature_flags).length > 0) return true;
+	if (event.feature_flags && Object.keys(event.feature_flags).length > 0)
+		return true;
 	// Random sample 5% of happy, fast, normal requests.
 	return Math.random() < 0.05;
 }

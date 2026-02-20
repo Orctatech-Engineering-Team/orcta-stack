@@ -1,17 +1,18 @@
 // Unit tests for the Result type and all combinators.
 // Pure functions — no DB, no network, no mocks.
-import { describe, it, expect } from "vitest";
+
 import {
-	ok,
-	err,
-	isOk,
-	isErr,
-	unwrap,
-	map,
 	andThen,
 	andThenAsync,
+	err,
+	isErr,
+	isOk,
+	map,
 	match,
+	ok,
+	unwrap,
 } from "@repo/shared";
+import { describe, expect, it } from "vitest";
 
 // ─── Constructors ────────────────────────────────────────────────────────────
 
@@ -79,7 +80,10 @@ describe("map", () => {
 
 	it("does not call fn on Err", () => {
 		let called = false;
-		map(err("e"), () => { called = true; return 0; });
+		map(err("e"), () => {
+			called = true;
+			return 0;
+		});
 		expect(called).toBe(false);
 	});
 });
@@ -105,7 +109,10 @@ describe("andThen", () => {
 
 	it("does not call fn on Err input", () => {
 		let called = false;
-		andThen(err("e"), () => { called = true; return ok(0); });
+		andThen(err("e"), () => {
+			called = true;
+			return ok(0);
+		});
 		expect(called).toBe(false);
 	});
 });
@@ -131,7 +138,10 @@ describe("andThenAsync", () => {
 
 	it("does not call fn on Err input", async () => {
 		let called = false;
-		await andThenAsync(err("e"), async () => { called = true; return ok(0); });
+		await andThenAsync(err("e"), async () => {
+			called = true;
+			return ok(0);
+		});
 		expect(called).toBe(false);
 	});
 });
@@ -157,10 +167,13 @@ describe("match", () => {
 
 	it("ok and err branches can return different types", () => {
 		// This tests the R1 | R2 generic — both branches compile with distinct return types.
-		const result = match(ok(1) as ReturnType<typeof ok<number>> | ReturnType<typeof err<string>>, {
-			ok: (n) => n * 2,        // number
-			err: (e) => e.length,    // also number, but from a different source
-		});
+		const result = match(
+			ok(1) as ReturnType<typeof ok<number>> | ReturnType<typeof err<string>>,
+			{
+				ok: (n) => n * 2, // number
+				err: (e) => e.length, // also number, but from a different source
+			},
+		);
 		expect(typeof result).toBe("number");
 	});
 });

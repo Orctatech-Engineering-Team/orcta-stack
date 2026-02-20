@@ -5,11 +5,11 @@
 //
 // Auth is handled by actually signing up through the app — no mocks.
 // Each test suite gets its own user; afterEach cleans all auth-related tables.
-import { describe, it, expect, afterEach } from "vitest";
-import app from "@/app";
-import { db } from "@/db";
-import { schema } from "@/db";
+
 import { eq } from "drizzle-orm";
+import { afterEach, describe, expect, it } from "vitest";
+import app from "@/app";
+import { db, schema } from "@/db";
 
 // ─── Cleanup ─────────────────────────────────────────────────────────────────
 
@@ -76,7 +76,6 @@ describe("GET /api/users/me", () => {
 		});
 
 		expect(res.status).toBe(200);
-		// biome-ignore lint/suspicious/noExplicitAny: test assertion convenience
 		const body = (await res.json()) as any;
 		expect(body.success).toBe(true);
 		expect(body.data.email).toBe(email);
@@ -105,7 +104,6 @@ describe("PATCH /api/users/me", () => {
 		});
 
 		expect(res.status).toBe(200);
-		// biome-ignore lint/suspicious/noExplicitAny: test assertion convenience
 		const body = (await res.json()) as any;
 		expect(body.data.name).toBe("Updated Name");
 	});
@@ -121,7 +119,6 @@ describe("PATCH /api/users/me", () => {
 		});
 
 		expect(res.status).toBe(409);
-		// biome-ignore lint/suspicious/noExplicitAny: test assertion convenience
 		const body = (await res.json()) as any;
 		expect(body.success).toBe(false);
 		expect(body.error.code).toBe("EMAIL_TAKEN");
@@ -136,7 +133,6 @@ describe("PATCH /api/users/me", () => {
 		});
 
 		expect(res.status).toBe(400);
-		// biome-ignore lint/suspicious/noExplicitAny: test assertion convenience
 		const body = (await res.json()) as any;
 		expect(body.error.code).toBe("EMAIL_UNCHANGED");
 	});
@@ -150,7 +146,6 @@ describe("PATCH /api/users/me", () => {
 		});
 
 		expect(res.status).toBe(200);
-		// biome-ignore lint/suspicious/noExplicitAny: test assertion convenience
 		const body = (await res.json()) as any;
 		expect(body.data.email).toBe("new@example.com");
 		expect(body.data.emailVerified).toBe(false);
@@ -165,7 +160,6 @@ describe("PATCH /api/users/me", () => {
 		});
 
 		expect(res.status).toBe(200);
-		// biome-ignore lint/suspicious/noExplicitAny: test assertion convenience
 		const body = (await res.json()) as any;
 		expect(body.data.email).toBe(email);
 	});
@@ -186,7 +180,6 @@ describe("GET /api/users/:id", () => {
 		});
 
 		expect(res.status).toBe(403);
-		// biome-ignore lint/suspicious/noExplicitAny: test assertion convenience
 		const body = (await res.json()) as any;
 		expect(body.error.code).toBe("FORBIDDEN");
 	});
@@ -228,7 +221,6 @@ describe("GET /api/users/:id", () => {
 		});
 
 		expect(res.status).toBe(200);
-		// biome-ignore lint/suspicious/noExplicitAny: test assertion convenience
 		const body = (await res.json()) as any;
 		expect(body.data.email).toBe(targetEmail);
 	});

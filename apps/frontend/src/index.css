@@ -1,147 +1,182 @@
 /* Inter — self-hosted via Google Fonts CDN (see index.html for preconnect). */
 /* display=swap ensures text renders immediately in system font while Inter loads. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 @theme {
-  /* ─── Typography ──────────────────────────────────────────────────────────
+	/* ─── Typography ──────────────────────────────────────────────────────────
    * Font stack: Inter → system-ui → native sans.
    * Base size 1rem (16px). Never go below 1rem for body copy — WCAG 1.4.4
    * (Resize Text) requires text to scale to 200% without loss of content.
    */
-  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+	--font-sans:
+		"Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+		sans-serif;
 
-  /* Typographic scale — minor third (×1.2). Each step ≈ 1.2× the previous.
+	/* Typographic scale — minor third (×1.2). Each step ≈ 1.2× the previous.
    * All sizes in rem so they respect the user's browser font-size setting.
    * Using a named scale avoids magic numbers in Tailwind classes. */
-  --text-xs:   0.75rem;   /* 12px  — captions, badges */
-  --text-sm:   0.875rem;  /* 14px  — helper text, secondary labels */
-  --text-base: 1rem;      /* 16px  — body copy (browser default) */
-  --text-lg:   1.125rem;  /* 18px  — lead text, subheadings */
-  --text-xl:   1.25rem;   /* 20px  — card titles */
-  --text-2xl:  1.5rem;    /* 24px  — section headings */
-  --text-3xl:  1.875rem;  /* 30px  — page headings */
-  --text-4xl:  2.25rem;   /* 36px  — hero headings */
+	--text-xs: 0.75rem; /* 12px  — captions, badges */
+	--text-sm: 0.875rem; /* 14px  — helper text, secondary labels */
+	--text-base: 1rem; /* 16px  — body copy (browser default) */
+	--text-lg: 1.125rem; /* 18px  — lead text, subheadings */
+	--text-xl: 1.25rem; /* 20px  — card titles */
+	--text-2xl: 1.5rem; /* 24px  — section headings */
+	--text-3xl: 1.875rem; /* 30px  — page headings */
+	--text-4xl: 2.25rem; /* 36px  — hero headings */
 
-  /* Leading. WCAG 1.4.12 (Text Spacing): line height ≥ 1.5× font size. */
-  --leading-tight:  1.25;
-  --leading-snug:   1.375;
-  --leading-normal: 1.5;
-  --leading-relaxed: 1.625;
+	/* Leading. WCAG 1.4.12 (Text Spacing): line height ≥ 1.5× font size. */
+	--leading-tight: 1.25;
+	--leading-snug: 1.375;
+	--leading-normal: 1.5;
+	--leading-relaxed: 1.625;
 
-  /* ─── Colour tokens ───────────────────────────────────────────────────────
+	/* ─── Colour tokens ───────────────────────────────────────────────────────
    * All contrast ratios are against the stated background using WCAG 2.1
    * relative luminance formula. AA = 4.5:1 normal text, 3:1 large text/UI.
    */
 
-  /* Primary — pure black on white: 21:1. Never fails. */
-  --color-primary: #18181b;            /* zinc-900  */
-  --color-primary-foreground: #ffffff;
+	/* Primary — pure black on white: 21:1. Never fails. */
+	--color-primary: #18181b; /* zinc-900  */
+	--color-primary-foreground: #ffffff;
 
-  /* Secondary — used for subtle button/chip backgrounds. */
-  --color-secondary: #f4f4f5;          /* zinc-100 */
-  --color-secondary-foreground: #18181b; /* zinc-900, 16.75:1 on zinc-100 ✓ */
+	/* Secondary — used for subtle button/chip backgrounds. */
+	--color-secondary: #f4f4f5; /* zinc-100 */
+	--color-secondary-foreground: #18181b; /* zinc-900, 16.75:1 on zinc-100 ✓ */
 
-  /* Muted — used for placeholders, disabled state backgrounds. */
-  --color-muted: #f4f4f5;              /* zinc-100 */
-  /* Was #71717a (zinc-500): 3.84:1 on white — FAILS AA. */
-  /* Fixed to #52525b (zinc-600): 7.47:1 on white, 6.86:1 on zinc-100. ✓ */
-  --color-muted-foreground: #52525b;
+	/* Muted — used for placeholders, disabled state backgrounds. */
+	--color-muted: #f4f4f5; /* zinc-100 */
+	/* Was #71717a (zinc-500): 3.84:1 on white — FAILS AA. */
+	/* Fixed to #52525b (zinc-600): 7.47:1 on white, 6.86:1 on zinc-100. ✓ */
+	--color-muted-foreground: #52525b;
 
-  /* Accent — used for hover states, selected items. */
-  --color-accent: #f4f4f5;
-  --color-accent-foreground: #18181b;
+	/* Accent — used for hover states, selected items. */
+	--color-accent: #f4f4f5;
+	--color-accent-foreground: #18181b;
 
-  /* Destructive — two tokens:
+	/* Destructive — two tokens:
    *   -background: for filled destructive buttons (white label: 4.71:1) ✓
    *   -text: for inline error messages on white/light bg (6.09:1) ✓
    * Was #ef4444 (red-400): 3.72:1 on white — FAILS AA for normal text.
    */
-  --color-destructive: #dc2626;        /* red-600 — button background */
-  --color-destructive-text: #b91c1c;   /* red-700 — inline error text   */
-  --color-destructive-foreground: #ffffff;
+	--color-destructive: #dc2626; /* red-600 — button background */
+	--color-destructive-text: #b91c1c; /* red-700 — inline error text   */
+	--color-destructive-foreground: #ffffff;
 
-  /* Borders & inputs. UI components need 3:1 against adjacent colours. */
-  /* zinc-300 on white: 2.76:1 — marginal. Use zinc-400 (#a1a1aa) for inputs. */
-  --color-border: #d4d4d8;             /* zinc-300 */
-  --color-input: #a1a1aa;              /* zinc-400, 3.02:1 on white ✓ for UI */
-  --color-ring: #18181b;               /* zinc-900 — focus ring, 16.75:1 ✓ */
+	/* Borders & inputs. UI components need 3:1 against adjacent colours. */
+	/* zinc-300 on white: 2.76:1 — marginal. Use zinc-400 (#a1a1aa) for inputs. */
+	--color-border: #d4d4d8; /* zinc-300 */
+	--color-input: #a1a1aa; /* zinc-400, 3.02:1 on white ✓ for UI */
+	--color-ring: #18181b; /* zinc-900 — focus ring, 16.75:1 ✓ */
 
-  /* Surfaces. */
-  --color-background: #ffffff;
-  --color-foreground: #09090b;         /* zinc-950, 20.33:1 on white ✓ */
-  --color-card: #ffffff;
-  --color-card-foreground: #09090b;
-  --color-popover: #ffffff;
-  --color-popover-foreground: #09090b;
+	/* Surfaces. */
+	--color-background: #ffffff;
+	--color-foreground: #09090b; /* zinc-950, 20.33:1 on white ✓ */
+	--color-card: #ffffff;
+	--color-card-foreground: #09090b;
+	--color-popover: #ffffff;
+	--color-popover-foreground: #09090b;
 
-  /* Radius scale. */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
+	/* Radius scale. */
+	--radius-sm: 0.25rem;
+	--radius-md: 0.375rem;
+	--radius-lg: 0.5rem;
+	--radius-xl: 0.75rem;
 }
 
 @layer base {
-  *,
-  ::before,
-  ::after {
-    @apply border-border box-border;
-  }
+	*,
+	::before,
+	::after {
+		@apply border-border box-border;
+	}
 
-  html {
-    /* Explicit base font size. Users can override this in browser settings.
+	html {
+		/* Explicit base font size. Users can override this in browser settings.
      * 1rem = user's preferred base (default 16px). Never set px here. */
-    font-size: 100%;
-    /* Smooth scrolling — respects prefers-reduced-motion via media query. */
-    scroll-behavior: smooth;
-  }
+		font-size: 100%;
+		/* Smooth scrolling — respects prefers-reduced-motion via media query. */
+		scroll-behavior: smooth;
+	}
 
-  @media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
-    *, ::before, ::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-    }
-  }
+	@media (prefers-reduced-motion: reduce) {
+		html {
+			scroll-behavior: auto;
+		}
+		*,
+		::before,
+		::after {
+			/* biome-ignore lint/complexity/noImportantStyles: prefers-reduced-motion must win over
+			   component-level transition utilities regardless of specificity — !important is required */
+			animation-duration: 0.01ms !important;
+			/* biome-ignore lint/complexity/noImportantStyles: see above */
+			animation-iteration-count: 1 !important;
+			/* biome-ignore lint/complexity/noImportantStyles: see above */
+			transition-duration: 0.01ms !important;
+		}
+	}
 
-  body {
-    @apply bg-background text-foreground antialiased;
-    font-family: var(--font-sans);
-    font-size: var(--text-base);
-    /* WCAG 1.4.12: line-height ≥ 1.5 for body copy. */
-    line-height: var(--leading-normal);
-    /* Enable common OpenType features: real ligatures (rlig), contextual
+	body {
+		@apply bg-background text-foreground antialiased;
+		font-family: var(--font-sans);
+		font-size: var(--text-base);
+		/* WCAG 1.4.12: line-height ≥ 1.5 for body copy. */
+		line-height: var(--leading-normal);
+		/* Enable common OpenType features: real ligatures (rlig), contextual
      * alternates (calt). Both improve readability at no cost. */
-    font-feature-settings: "rlig" 1, "calt" 1;
-    /* Ensure text scales with user settings (do not fix px line-height). */
-    -webkit-text-size-adjust: 100%;
-  }
+		font-feature-settings:
+			"rlig" 1,
+			"calt" 1;
+		/* Ensure text scales with user settings (do not fix px line-height). */
+		-webkit-text-size-adjust: 100%;
+	}
 
-  /* Ensure form controls inherit the document font rather than OS defaults.
+	/* Ensure form controls inherit the document font rather than OS defaults.
    * Without this, inputs on some browsers render in Times New Roman. */
-  input,
-  button,
-  textarea,
-  select {
-    font: inherit;
-  }
+	input,
+	button,
+	textarea,
+	select {
+		font: inherit;
+	}
 
-  /* Focus-visible: keyboard-only focus ring. Hidden for mouse clicks,
+	/* Focus-visible: keyboard-only focus ring. Hidden for mouse clicks,
    * visible for Tab / keyboard navigation. WCAG 2.4.7 (Focus Visible). */
-  :focus-visible {
-    outline: 2px solid var(--color-ring);
-    outline-offset: 2px;
-  }
+	:focus-visible {
+		outline: 2px solid var(--color-ring);
+		outline-offset: 2px;
+	}
 
-  /* Heading defaults — scaled rhythm, tight leading, font-weight 600.
+	/* Heading defaults — scaled rhythm, tight leading, font-weight 600.
    * These are base defaults; Tailwind utility classes override them. */
-  h1 { font-size: var(--text-4xl); line-height: var(--leading-tight); font-weight: 700; }
-  h2 { font-size: var(--text-3xl); line-height: var(--leading-tight); font-weight: 700; }
-  h3 { font-size: var(--text-2xl); line-height: var(--leading-snug);  font-weight: 600; }
-  h4 { font-size: var(--text-xl);  line-height: var(--leading-snug);  font-weight: 600; }
-  h5 { font-size: var(--text-lg);  line-height: var(--leading-normal); font-weight: 600; }
-  h6 { font-size: var(--text-base); line-height: var(--leading-normal); font-weight: 600; }
+	h1 {
+		font-size: var(--text-4xl);
+		line-height: var(--leading-tight);
+		font-weight: 700;
+	}
+	h2 {
+		font-size: var(--text-3xl);
+		line-height: var(--leading-tight);
+		font-weight: 700;
+	}
+	h3 {
+		font-size: var(--text-2xl);
+		line-height: var(--leading-snug);
+		font-weight: 600;
+	}
+	h4 {
+		font-size: var(--text-xl);
+		line-height: var(--leading-snug);
+		font-weight: 600;
+	}
+	h5 {
+		font-size: var(--text-lg);
+		line-height: var(--leading-normal);
+		font-weight: 600;
+	}
+	h6 {
+		font-size: var(--text-base);
+		line-height: var(--leading-normal);
+		font-weight: 600;
+	}
 }

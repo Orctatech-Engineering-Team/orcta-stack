@@ -1,6 +1,6 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import type { QueryClient } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { sessionQueryOptions } from "@/services/auth";
 
@@ -14,7 +14,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 	// After any auth mutation (signIn, signOut, signUp), invalidate
 	// sessionQueryOptions.queryKey and navigate; the router re-runs this.
 	beforeLoad: async ({ context }) => {
-		const session = await context.queryClient.ensureQueryData(sessionQueryOptions);
+		const session =
+			await context.queryClient.ensureQueryData(sessionQueryOptions);
 		return { session };
 	},
 	component: RootComponent,

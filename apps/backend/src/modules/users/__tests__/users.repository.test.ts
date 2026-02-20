@@ -5,14 +5,14 @@
 //
 // Each test is isolated: afterEach cleans out the users table.
 // Sessions and accounts cascade on user delete, so no manual cleanup needed.
-import { describe, it, expect, afterEach } from "vitest";
-import { db } from "@/db";
+
 import { users } from "@repo/db/schema";
-import { InfrastructureError } from "@/lib/error";
+import { afterEach, describe, expect, it } from "vitest";
+import { db } from "@/db";
 import {
-	findUserById,
-	findUserByEmail,
 	createUser,
+	findUserByEmail,
+	findUserById,
 	updateUser,
 } from "../users.repository";
 

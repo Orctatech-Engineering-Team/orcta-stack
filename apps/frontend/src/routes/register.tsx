@@ -1,15 +1,15 @@
+import { useForm } from "@tanstack/react-form";
+import { useQueryClient } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
 	redirect,
 	useNavigate,
 } from "@tanstack/react-router";
-import { useForm } from "@tanstack/react-form";
-import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { z } from "zod";
 import { authClient } from "@/lib/auth-client";
 import { sessionQueryOptions } from "@/services/auth";
-import { toast } from "sonner";
 
 const registerSchema = z
 	.object({
@@ -81,7 +81,12 @@ function RegisterPage() {
 						<form.Field name="name">
 							{(field) => (
 								<div>
-									<label htmlFor="name" className="block text-sm font-medium text-gray-700">Name</label>
+									<label
+										htmlFor="name"
+										className="block text-sm font-medium text-gray-700"
+									>
+										Name
+									</label>
 									<input
 										id="name"
 										type="text"
@@ -92,7 +97,9 @@ function RegisterPage() {
 										placeholder="John Doe"
 									/>
 									{field.state.meta.errors.length > 0 && (
-										<p className="mt-1 text-sm text-red-600">{field.state.meta.errors.join(", ")}</p>
+										<p className="mt-1 text-sm text-red-600">
+											{field.state.meta.errors.join(", ")}
+										</p>
 									)}
 								</div>
 							)}
@@ -101,7 +108,12 @@ function RegisterPage() {
 						<form.Field name="email">
 							{(field) => (
 								<div>
-									<label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+									<label
+										htmlFor="email"
+										className="block text-sm font-medium text-gray-700"
+									>
+										Email
+									</label>
 									<input
 										id="email"
 										type="email"
@@ -112,7 +124,9 @@ function RegisterPage() {
 										placeholder="you@example.com"
 									/>
 									{field.state.meta.errors.length > 0 && (
-										<p className="mt-1 text-sm text-red-600">{field.state.meta.errors.join(", ")}</p>
+										<p className="mt-1 text-sm text-red-600">
+											{field.state.meta.errors.join(", ")}
+										</p>
 									)}
 								</div>
 							)}
@@ -121,7 +135,12 @@ function RegisterPage() {
 						<form.Field name="password">
 							{(field) => (
 								<div>
-									<label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
+									<label
+										htmlFor="password"
+										className="block text-sm font-medium text-gray-700"
+									>
+										Password
+									</label>
 									<input
 										id="password"
 										type="password"
@@ -132,7 +151,9 @@ function RegisterPage() {
 										placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
 									/>
 									{field.state.meta.errors.length > 0 && (
-										<p className="mt-1 text-sm text-red-600">{field.state.meta.errors.join(", ")}</p>
+										<p className="mt-1 text-sm text-red-600">
+											{field.state.meta.errors.join(", ")}
+										</p>
 									)}
 								</div>
 							)}
@@ -141,7 +162,12 @@ function RegisterPage() {
 						<form.Field name="confirmPassword">
 							{(field) => (
 								<div>
-									<label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">Confirm Password</label>
+									<label
+										htmlFor="confirmPassword"
+										className="block text-sm font-medium text-gray-700"
+									>
+										Confirm Password
+									</label>
 									<input
 										id="confirmPassword"
 										type="password"
@@ -152,7 +178,9 @@ function RegisterPage() {
 										placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
 									/>
 									{field.state.meta.errors.length > 0 && (
-										<p className="mt-1 text-sm text-red-600">{field.state.meta.errors.join(", ")}</p>
+										<p className="mt-1 text-sm text-red-600">
+											{field.state.meta.errors.join(", ")}
+										</p>
 									)}
 								</div>
 							)}

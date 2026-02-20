@@ -4,7 +4,7 @@
 // No DB imports, no async unless unavoidable, no HTTP.
 // Testable by calling with plain values — no mocks, no DB setup.
 import type { User } from "@repo/db/schema";
-import { ok, err, type Result } from "@repo/shared";
+import { err, ok, type Result } from "@repo/shared";
 import type { EmailUnchanged } from "./users.errors";
 
 // Prepare an email change for a user.

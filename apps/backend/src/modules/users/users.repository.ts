@@ -3,15 +3,16 @@
 // - Infrastructure errors (DB down, bad connection) become InfrastructureError.
 // - Domain errors (not found, conflict) are typed discriminated unions.
 // - Callers destructure the Result and handle each branch — the compiler enforces exhaustiveness.
+
+import type { InsertUser, User } from "@repo/db/schema";
+import { users } from "@repo/db/schema";
+import type { Result } from "@repo/shared";
+import { err, ok } from "@repo/shared";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { users } from "@repo/db/schema";
-import { ok, err } from "@repo/shared";
-import type { Result } from "@repo/shared";
 import { InfrastructureError } from "@/lib/error";
 import { tryInfra } from "@/lib/infra";
-import type { User, InsertUser } from "@repo/db/schema";
-import type { UserNotFound, EmailTaken } from "./users.errors";
+import type { EmailTaken, UserNotFound } from "./users.errors";
 
 export async function findUserById(
 	id: string,

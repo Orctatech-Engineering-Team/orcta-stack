@@ -10,20 +10,23 @@
 //   - Infrastructure failures → 500. Domain errors → specific 4xx.
 //   - match() handles the ok/err split.
 //   - switch(e.type) inside the err branch covers each domain variant exhaustively.
-import type { AppRouteHandler } from "@/lib/types";
-import { success, failure, isInfraError } from "@/lib/types";
-import {
-	OK,
-	BAD_REQUEST,
-	FORBIDDEN,
-	NOT_FOUND,
-	CONFLICT,
-	INTERNAL_SERVER_ERROR,
-} from "@/lib/types";
-import { match } from "@repo/shared";
+
 import type { InsertUser } from "@repo/db/schema";
-import type { GetMeRoute, UpdateMeRoute, GetUserByIdRoute } from "./routes";
-import { findUserById, findUserByEmail, updateUser } from "./users.repository";
+import { match } from "@repo/shared";
+import type { AppRouteHandler } from "@/lib/types";
+import {
+	BAD_REQUEST,
+	CONFLICT,
+	FORBIDDEN,
+	failure,
+	INTERNAL_SERVER_ERROR,
+	isInfraError,
+	NOT_FOUND,
+	OK,
+	success,
+} from "@/lib/types";
+import type { GetMeRoute, GetUserByIdRoute, UpdateMeRoute } from "./routes";
+import { findUserByEmail, findUserById, updateUser } from "./users.repository";
 import { prepareEmailChange } from "./users.usecases";
 
 // GET /users/me

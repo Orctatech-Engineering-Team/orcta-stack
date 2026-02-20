@@ -1,8 +1,8 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { sessionQueryOptions } from "@/services/auth";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/dashboard")({
 	// Auth guard. context.session was set by the root's beforeLoad.

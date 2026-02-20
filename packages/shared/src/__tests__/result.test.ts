@@ -1,14 +1,14 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
-	ok,
-	err,
-	isOk,
-	isErr,
-	unwrap,
-	map,
 	andThen,
 	andThenAsync,
+	err,
+	isErr,
+	isOk,
+	map,
 	match,
+	ok,
+	unwrap,
 } from "../result.js";
 
 // ─── ok / err constructors ────────────────────────────────────────────────────

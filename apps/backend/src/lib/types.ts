@@ -1,30 +1,36 @@
 import type { RouteConfig, RouteHandler } from "@hono/zod-openapi";
+import type { ApiError, ApiSuccess } from "@repo/shared";
 import type { Context } from "hono";
 import type { ZodType } from "zod";
 import type { AppEnv } from "./create-app";
-import type { ApiSuccess, ApiError } from "@repo/shared";
 import { InfrastructureError } from "./error";
 
 // Re-export for convenience
-export type { ApiSuccess, ApiError, ApiResponse } from "@repo/shared";
-export type { Result, Ok, Err } from "@repo/shared";
-export { ok, err, isOk, isErr } from "@repo/shared";
+export type {
+	ApiError,
+	ApiResponse,
+	ApiSuccess,
+	Err,
+	Ok,
+	Result,
+} from "@repo/shared";
+export { err, isErr, isOk, ok } from "@repo/shared";
 
 // ─── HTTP status codes ───────────────────────────────────────────────────────
 // Re-exported here so handlers only need a single import from "@/lib/types".
 export {
-	OK,
-	CREATED,
-	NO_CONTENT,
 	BAD_REQUEST,
-	UNAUTHORIZED,
-	FORBIDDEN,
-	NOT_FOUND,
 	CONFLICT,
-	UNPROCESSABLE_ENTITY,
-	TOO_MANY_REQUESTS,
+	CREATED,
+	FORBIDDEN,
 	INTERNAL_SERVER_ERROR,
+	NO_CONTENT,
+	NOT_FOUND,
+	OK,
 	SERVICE_UNAVAILABLE,
+	TOO_MANY_REQUESTS,
+	UNAUTHORIZED,
+	UNPROCESSABLE_ENTITY,
 } from "./http-status-codes";
 
 // Type-safe route handler
@@ -151,7 +157,10 @@ export type WideEvent = {
 //
 // Example:
 //   addToEvent(c, { order: { id, total_cents }, payment: { method } });
-export function addToEvent(c: Context<AppEnv>, fields: Partial<WideEvent>): void {
+export function addToEvent(
+	c: Context<AppEnv>,
+	fields: Partial<WideEvent>,
+): void {
 	const event = c.get("wideEvent");
 	if (event) Object.assign(event, fields);
 }

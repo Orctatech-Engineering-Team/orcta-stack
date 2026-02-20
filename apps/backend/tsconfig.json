@@ -1,32 +1,32 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "target": "ESNext",
-    "jsx": "react-jsx",
-    "jsxImportSource": "react",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"],
-    },
-    "typeRoots": ["./node_modules/@types"],
-    "types": ["node"],
-    "strict": true,
-    "outDir": "./dist",
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-  },
-  "tsc-alias": {
-    "resolveFullPaths": true,
-    "baseUrl": "./",
-    "paths": {
-      "@/*": ["./src/*"],
-    },
-  },
-  "include": ["src", "globals.d.ts", "../../packages/db/seedCore.ts"],
-  "references": [
-    { "path": "../../packages/db" },
-    { "path": "../../packages/shared" },
-  ],
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"target": "ESNext",
+		"jsx": "react-jsx",
+		"jsxImportSource": "react",
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["./src/*"]
+		},
+		"typeRoots": ["./node_modules/@types"],
+		"types": ["node"],
+		"strict": true,
+		"outDir": "./dist",
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true
+	},
+	"tsc-alias": {
+		"resolveFullPaths": true,
+		"baseUrl": "./",
+		"paths": {
+			"@/*": ["./src/*"]
+		}
+	},
+	"include": ["src", "globals.d.ts", "../../packages/db/seedCore.ts"],
+	"references": [
+		{ "path": "../../packages/db" },
+		{ "path": "../../packages/shared" }
+	]
 }

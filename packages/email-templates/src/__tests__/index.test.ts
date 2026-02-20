@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { welcomeEmail, passwordResetEmail } from "../index.js";
+import { describe, expect, it } from "vitest";
+import { passwordResetEmail, welcomeEmail } from "../index.js";
 
 // ─── welcomeEmail ─────────────────────────────────────────────────────────────
 

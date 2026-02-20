@@ -1,5 +1,5 @@
-import { ok, err } from "@repo/shared";
 import type { Result } from "@repo/shared";
+import { err, ok } from "@repo/shared";
 import { InfrastructureError } from "./error";
 
 // The single catch boundary for all repository operations.

@@ -2,13 +2,13 @@ import { z } from "zod";
 
 // Pagination
 export const paginationSchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  limit: z.coerce.number().int().positive().max(100).default(20),
+	page: z.coerce.number().int().positive().default(1),
+	limit: z.coerce.number().int().positive().max(100).default(20),
 });
 
 // Common params
 export const idParamSchema = z.object({
-  id: z.string().min(1),
+	id: z.string().min(1),
 });
 
 // Type exports
@@ -30,17 +30,17 @@ export type IdParam = z.infer<typeof idParamSchema>;
 
 // Wraps any data schema in { success: true, data: T }.
 export const apiSuccessSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
-  z.object({
-    success: z.literal(true),
-    data: dataSchema,
-  });
+	z.object({
+		success: z.literal(true),
+		data: dataSchema,
+	});
 
 // Fixed shape for all error responses: { success: false, error: { code, message, details? } }.
 export const apiErrorSchema = z.object({
-  success: z.literal(false),
-  error: z.object({
-    code: z.string(),
-    message: z.string(),
-    details: z.record(z.string(), z.unknown()).optional(),
-  }),
+	success: z.literal(false),
+	error: z.object({
+		code: z.string(),
+		message: z.string(),
+		details: z.record(z.string(), z.unknown()).optional(),
+	}),
 });

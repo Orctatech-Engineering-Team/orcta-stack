@@ -1,12 +1,12 @@
 import { cors } from "hono/cors";
 import { showRoutes } from "hono/dev";
+import env from "@/env";
 import { auth } from "@/lib/auth";
 import configureOpenAPI from "@/lib/configure-open-api";
 import createApp from "@/lib/create-app";
 import { authMiddleware } from "@/middlewares/auth";
 import { wideEventMiddleware } from "@/middlewares/wide-event";
 import { publicRoutes, routes } from "@/routes/index";
-import env from "@/env";
 
 const app = createApp();
 

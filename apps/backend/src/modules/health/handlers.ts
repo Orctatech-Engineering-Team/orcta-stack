@@ -1,8 +1,8 @@
-import type { AppRouteHandler } from "@/lib/types";
-import { success, OK, SERVICE_UNAVAILABLE } from "@/lib/types";
-import type { HealthCheckRoute, PingRoute } from "./routes";
-import { db } from "@/db";
 import { sql } from "drizzle-orm";
+import { db } from "@/db";
+import type { AppRouteHandler } from "@/lib/types";
+import { OK, SERVICE_UNAVAILABLE, success } from "@/lib/types";
+import type { HealthCheckRoute, PingRoute } from "./routes";
 
 const startTime = Date.now();
 

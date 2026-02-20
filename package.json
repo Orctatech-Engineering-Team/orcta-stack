@@ -1,37 +1,37 @@
 {
-  "name": "orcta-stack",
-  "version": "1.0.0",
-  "license": "MIT",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "setup": "./scripts/setup.sh",
-    "dev": "pnpm build:packages && pnpm --parallel --filter \"./apps/*\" dev",
-    "dev:backend": "pnpm build:packages && pnpm --filter backend dev",
-    "dev:frontend": "pnpm build:packages && pnpm --filter frontend dev",
-    "build": "pnpm build:packages && pnpm build:apps",
-    "build:packages": "pnpm -r --filter \"@repo/*\" build",
-    "build:apps": "pnpm -r --filter ./apps/frontend build",
-    "typecheck": "pnpm --recursive typecheck",
-    "lint": "pnpm --recursive lint",
-    "test": "pnpm --recursive test",
-    "clean": "rm -rf apps/*/dist packages/*/dist node_modules/.cache",
-    "db:generate": "pnpm --filter backend db:generate",
-    "db:migrate": "pnpm --filter backend db:migrate",
-    "db:studio": "pnpm --filter backend db:studio",
-    "new:module": "./scripts/new-module.sh"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.3.7",
-    "@types/node": "^25.0.3",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "zod": "4.2.1"
-  },
-  "engines": {
-    "node": ">=20.0.0"
-  },
-  "packageManager": "pnpm@9.15.0"
+	"name": "orcta-stack",
+	"version": "1.0.0",
+	"license": "MIT",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"setup": "./scripts/setup.sh",
+		"dev": "pnpm build:packages && pnpm --parallel --filter \"./apps/*\" dev",
+		"dev:backend": "pnpm build:packages && pnpm --filter backend dev",
+		"dev:frontend": "pnpm build:packages && pnpm --filter frontend dev",
+		"build": "pnpm build:packages && pnpm build:apps",
+		"build:packages": "pnpm -r --filter \"@repo/*\" build",
+		"build:apps": "pnpm -r --filter ./apps/frontend build",
+		"typecheck": "pnpm --recursive typecheck",
+		"lint": "pnpm --recursive lint",
+		"test": "pnpm --recursive test",
+		"clean": "rm -rf apps/*/dist packages/*/dist node_modules/.cache",
+		"db:generate": "pnpm --filter backend db:generate",
+		"db:migrate": "pnpm --filter backend db:migrate",
+		"db:studio": "pnpm --filter backend db:studio",
+		"new:module": "./scripts/new-module.sh"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.3.7",
+		"@types/node": "^25.0.3",
+		"tsx": "^4.21.0",
+		"typescript": "^5.9.3"
+	},
+	"dependencies": {
+		"zod": "4.2.1"
+	},
+	"engines": {
+		"node": ">=20.0.0"
+	},
+	"packageManager": "pnpm@9.15.0"
 }

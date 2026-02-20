@@ -1,7 +1,7 @@
 import type { Context, Next } from "hono";
 import { auth } from "@/lib/auth";
-import { addToEvent, UNAUTHORIZED } from "@/lib/types";
 import type { AppEnv } from "@/lib/create-app";
+import { addToEvent, UNAUTHORIZED } from "@/lib/types";
 
 export async function authMiddleware(c: Context<AppEnv>, next: Next) {
 	const session = await auth.api.getSession({

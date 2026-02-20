@@ -1,9 +1,8 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { pinoLogger } from "hono-pino";
+import pino, { multistream } from "pino";
 import { notFound, onError } from "stoker/middlewares";
 import { defaultHook } from "stoker/openapi";
-import pino from "pino";
-import { multistream } from "pino";
 import env from "@/env";
 import type { Session } from "./auth";
 import type { WideEvent } from "./types";

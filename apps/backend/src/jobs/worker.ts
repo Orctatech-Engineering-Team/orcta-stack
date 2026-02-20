@@ -1,7 +1,7 @@
-import { Worker, Job } from "bullmq";
+import { type Job, Worker } from "bullmq";
+import pino from "pino";
 import { getRedis } from "@/lib/redis";
 import type { JobData, JobName } from "./index";
-import pino from "pino";
 
 const logger = pino({ name: "worker" });
 

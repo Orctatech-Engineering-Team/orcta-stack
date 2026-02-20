@@ -1,15 +1,15 @@
+import { useForm } from "@tanstack/react-form";
+import { useQueryClient } from "@tanstack/react-query";
 import {
 	createFileRoute,
 	Link,
 	redirect,
 	useNavigate,
 } from "@tanstack/react-router";
-import { useForm } from "@tanstack/react-form";
-import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { z } from "zod";
 import { authClient } from "@/lib/auth-client";
 import { sessionQueryOptions } from "@/services/auth";
-import { toast } from "sonner";
 
 const loginSchema = z.object({
 	email: z.string().email("Invalid email address"),
@@ -141,7 +141,10 @@ function LoginPage() {
 
 				<p className="text-center text-sm text-gray-600">
 					Don’t have an account?{" "}
-					<Link to="/register" className="font-medium text-black hover:underline">
+					<Link
+						to="/register"
+						className="font-medium text-black hover:underline"
+					>
 						Sign up
 					</Link>
 				</p>
