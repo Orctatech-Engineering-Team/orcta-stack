@@ -1,6 +1,9 @@
 import { defineConfig } from "vitest/config";
 import path from "node:path";
 
+const repo = (pkg: string) =>
+  path.resolve(__dirname, "../../packages", pkg);
+
 export default defineConfig({
   test: {
     globals: true,
@@ -12,7 +15,13 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // Internal path alias
       "@": path.resolve(__dirname, "./src"),
+      // Workspace packages — point straight to source so no build step is needed
+      "@repo/shared": repo("shared/src/index.ts"),
+      "@repo/db/schema": repo("db/src/schema/index.ts"),
+      "@repo/db/types": repo("db/src/types.ts"),
+      "@repo/db": repo("db/src/index.ts"),
     },
   },
 });
