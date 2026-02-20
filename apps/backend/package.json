@@ -10,7 +10,7 @@
 		"lint": "biome check .",
 		"lint:fix": "biome check --fix .",
 		"test": "cross-env NODE_ENV=test vitest",
-		"build": "swc src --out-dir dist --config-file ../../.swcrc && tsc-alias && cp package.json dist/",
+		"build": "swc src --out-dir dist --config-file .swcrc && tsc-alias && cp package.json dist/",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit push",
 		"db:studio": "drizzle-kit studio",
