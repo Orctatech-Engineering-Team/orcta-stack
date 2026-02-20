@@ -6,7 +6,7 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
 	return (
-		<div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+		<div className="min-h-screen bg-linear-to-b from-gray-50 to-white">
 			<div className="container mx-auto px-4 py-16">
 				<div className="max-w-3xl mx-auto text-center">
 					<h1 className="text-5xl font-bold tracking-tight text-gray-900 mb-6">
@@ -25,7 +25,7 @@ function HomePage() {
 							Get Started
 						</Link>
 						<a
-							href="/docs"
+							href="/api/docs"
 							target="_blank"
 							rel="noopener noreferrer"
 							className="px-6 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors"

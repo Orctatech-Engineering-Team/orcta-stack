@@ -116,7 +116,16 @@
 		}
 	}
 
+	/* Base UI: portals (Dialog, Tooltip, etc.) render inside a portal. The root
+     element needs isolation:isolate so local z-index stacking contexts don't
+     bleed into portal overlays. body needs position:relative for iOS Safari 26+
+     to correctly size fixed-position backdrops. */
+	#root {
+		isolation: isolate;
+	}
+
 	body {
+		position: relative;
 		@apply bg-background text-foreground antialiased;
 		font-family: var(--font-sans);
 		font-size: var(--text-base);
