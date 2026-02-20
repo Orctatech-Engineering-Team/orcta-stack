@@ -1,4 +1,5 @@
 import type { RouteConfig, RouteHandler } from "@hono/zod-openapi";
+import type { Context } from "hono";
 import type { ZodType } from "zod";
 import type { AppEnv } from "./create-app";
 import type { ApiSuccess, ApiError } from "@repo/shared";
@@ -78,3 +79,47 @@ export function failure(error: {
 //   }
 export const isInfraError = (e: unknown): e is InfrastructureError =>
 	e instanceof InfrastructureError;
+
+// ─── Wide Events ─────────────────────────────────────────────────────────────
+// A wide event is a single, context-rich log emitted once per request per
+// service. The handler / middleware merges fields progressively throughout the
+// request lifecycle using addToEvent(), then the wide-event middleware emits
+// the complete record at the end.
+//
+// Inspired by: https://loggingsucks.com — "Implementing Wide Events" section.
+
+export type WideEvent = {
+	// Populated by wideEventMiddleware
+	request_id?: string;
+	timestamp?: string;
+	method?: string;
+	path?: string;
+	status_code?: number;
+	duration_ms?: number;
+	outcome?: "success" | "error";
+	service?: string;
+	service_version?: string;
+	region?: string;
+	ip?: string;
+	user_agent?: string;
+
+	// Populated by authMiddleware
+	user?: {
+		id: string;
+		role: string;
+		[k: string]: unknown;
+	};
+
+	// Populated by handlers — business context
+	[key: string]: unknown;
+};
+
+// Merges additional fields into the in-flight wide event.
+// Call this from handlers and middleware to add business context.
+//
+// Example:
+//   addToEvent(c, { order: { id, total_cents }, payment: { method } });
+export function addToEvent(c: Context<AppEnv>, fields: Partial<WideEvent>): void {
+	const event = c.get("wideEvent");
+	if (event) Object.assign(event, fields);
+}

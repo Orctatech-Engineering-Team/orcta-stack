@@ -35,6 +35,14 @@ const envSchema = z.object({
 
   // Email
   RESEND_API_KEY: z.string().optional(),
+
+  // Observability (Axiom)
+  AXIOM_TOKEN: z.string().optional(),
+  AXIOM_DATASET: z.string().optional(),
+
+  // Deployment metadata (injected by CI as git SHA / region)
+  SERVICE_VERSION: z.string().default("local"),
+  REGION: z.string().default("local"),
 });
 
 export type Env = z.infer<typeof envSchema>;

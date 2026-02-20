@@ -234,5 +234,82 @@ Test files live in `__tests__/` alongside the module they test, not in a top-lev
 | `jsonBody(schema)` | `@/lib/types` | Collapse `{ content: { "application/json": { schema } } }` for request bodies |
 | `OK`, `CREATED`, `NOT_FOUND`, `INTERNAL_SERVER_ERROR`, … | `@/lib/types` | Named HTTP status constants — re-exported from `src/lib/http-status-codes.ts` |
 | `AppRouteHandler` | `@/lib/types` | Type-safe handler type |
+| `WideEvent` | `@/lib/types` | Type for the per-request canonical log event |
+| `addToEvent(c, fields)` | `@/lib/types` | Merge business context into the in-flight wide event |
 | `authMiddleware` | `@/middlewares/auth` | Auth middleware (plain function, not factory) |
 | `requireRole` | `@/middlewares/auth` | Role guard (factory — takes role strings) |
+| `wideEventMiddleware` | `@/middlewares/wide-event` | Canonical log line accumulator — emits one wide event per request |
+
+---
+
+## Observability
+
+This codebase uses the **wide event / canonical log line** pattern from [loggingsucks.com](https://loggingsucks.com).
+
+Instead of emitting many small log statements throughout a request, a single rich event is built up over the request lifecycle and emitted once at the end with everything needed to answer any debugging question.
+
+```
+Request arrives
+   │
+   ▼
+wideEventMiddleware      ← initialises event: request_id, method, path, service, region
+   │
+   ▼
+authMiddleware           ← addToEvent: user.id, user.role
+   │
+   ▼
+business handler         ← addToEvent: domain-specific fields (order, payment, etc.)
+   │
+   ▼
+wideEventMiddleware      ← appends: status_code, duration_ms, outcome → logger.info(event)
+```
+
+### Adding business context from a handler
+
+```typescript
+import { addToEvent } from "@/lib/types";
+
+export const createOrderHandler: AppRouteHandler<CreateOrderRoute> = async (c) => {
+  const body = c.req.valid("json");
+  const result = await createOrder(body);
+
+  // Enrich the wide event with business context
+  if (result.ok) {
+    addToEvent(c, {
+      order: { id: result.value.id, total_cents: result.value.totalCents },
+    });
+    return c.json(success(result.value), CREATED);
+  }
+
+  return c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR);
+};
+```
+
+Every authenticated request automatically carries `user.id` and `user.role` — `authMiddleware` adds them without the handler needing to.
+
+### Sampling
+
+The wide event middleware uses **tail-based sampling** — the decision is made after the request completes:
+
+| Condition | Kept? |
+|---|---|
+| `status_code >= 500` | Always |
+| `outcome === "error"` | Always |
+| `duration_ms > 2000` | Always |
+| `user.role === "admin"` | Always |
+| Everything else | 5% random sample |
+
+This keeps Axiom ingest costs low while guaranteeing 100% capture of the events that matter.
+
+### Axiom setup
+
+Add to `.env.production`:
+
+```
+AXIOM_TOKEN=your-axiom-api-token
+AXIOM_DATASET=your-dataset-name
+SERVICE_VERSION=<injected-by-ci-as-git-sha>
+REGION=eu-west-1
+```
+
+In development these vars are absent and logs go to stdout with `pino-pretty`. In production, pino writes to both stdout (captured by Docker) and Axiom simultaneously.

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import configureOpenAPI from "@/lib/configure-open-api";
 import createApp from "@/lib/create-app";
 import { authMiddleware } from "@/middlewares/auth";
+import { wideEventMiddleware } from "@/middlewares/wide-event";
 import { publicRoutes, routes } from "@/routes/index";
 import env from "@/env";
 
@@ -14,6 +15,9 @@ const allowedOrigins = new Set([
 	"http://localhost:5174",
 	env.FRONTEND_URL,
 ]);
+
+// Wide event middleware — must be first so it wraps the entire request lifecycle
+app.use("*", wideEventMiddleware);
 
 // CORS configuration
 app.use(
