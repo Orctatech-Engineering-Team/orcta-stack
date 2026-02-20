@@ -139,55 +139,46 @@ switch (result.type) {
 
 ## Repository Pattern
 
-**Choice**: Interface (port) + implementation (adapter)
+**Choice**: Plain async functions, one file per module
 
 **Why**:
 
-1. **Testability** — Inject a mock repository in tests. No database needed.
+The classic port/adapter split (a TypeScript interface + a separate Drizzle implementation) adds indirection without payoff at this scale:
+- We never swap the underlying database at runtime
+- The DB can run locally in tests — mocking is not needed
+- One extra file per module accumulates quickly
+
+Instead, repositories are plain async functions in a single `*.repository.ts` file. Each function:
+- Returns `Result<T, DomainError | InfrastructureError>` — never throws
+- Wraps all DB calls in `tryInfra` — single catch boundary
+- Is tested directly against a real Postgres instance
 
 ```typescript
-// Test with fake data
-const fakeRepo = {
-  findById: async (id) => ({ id, name: 'Test User' }),
-};
-const result = await getUserUseCase({ userRepo: fakeRepo }, { id: '123' });
+// users.repository.ts — plain functions, no interface, no DI
+export async function findUserById(
+  id: string,
+): Promise<Result<User, UserNotFound | InfrastructureError>> {
+  const result = await tryInfra(`fetch user ${id}`, () =>
+    db.query.users.findFirst({ where: eq(users.id, id) }),
+  );
+  if (!result.ok) return result;
+  if (!result.value) return err({ type: "USER_NOT_FOUND", lookup: id });
+  return ok(result.value);
+}
 ```
 
-2. **Swappable** — Change from Drizzle to Prisma, or PostgreSQL to MongoDB. Use-cases don't change.
-
-3. **Clear contracts** — The interface defines exactly what data access you need. No "just import db and figure it out".
-
-4. **Single responsibility** — Repositories do data access. Use-cases do business logic. Neither does both.
-
-**The pattern**:
+**Testing without mocks**: repositories are integration-tested against a real local DB.
+The `Result` return type makes assertions straightforward without any mock setup:
 
 ```typescript
-// user.repo.port.ts — What you need
-interface UserRepo {
-  findById(id: string): Promise<User | undefined>;
-  findByEmail(email: string): Promise<User | undefined>;
-  insert(data: InsertUser): Promise<User>;
-}
-
-// user.repo.drizzle.ts — How you get it
-const userRepo: UserRepo = {
-  async findById(id) {
-    return db.query.users.findFirst({ where: eq(users.id, id) });
-  },
-  // ...
-};
-
-// Use-case doesn't know or care about Drizzle
-async function getUser(deps: { userRepo: UserRepo }, input) {
-  return deps.userRepo.findById(input.id);
-}
+const result = await findUserById("nonexistent");
+expect(result).toEqual({ ok: false, error: { type: "USER_NOT_FOUND", lookup: "nonexistent" } });
 ```
 
 **Trade-offs**:
 
-- More files
-- Indirection (port → adapter)
-- Overkill for simple CRUD apps
+- No ability to inject a fake repo (not needed — real DB is fast and simple)
+- Tight coupling to Drizzle (acceptable — swap cost is low when it's just functions)
 
 ---
 
@@ -313,7 +304,7 @@ switch (result.type) {
 
 ## Module Structure
 
-**Choice**: Feature-based modules with consistent file naming
+**Choice**: Feature-based modules with consistent flat file naming
 
 **Why**:
 
@@ -327,70 +318,50 @@ switch (result.type) {
 
 ```
 modules/users/
-  index.ts              # Exports the router
-  routes.ts             # OpenAPI route definitions
-  handlers.ts           # HTTP handlers
-  users.repo.port.ts    # Repository interface
-  users.repo.drizzle.ts # Repository implementation
-  usecases/
-    create-user.usecase.ts
-    get-user.usecase.ts
-    update-user.usecase.ts
+  index.ts               # Exports the router
+  routes.ts              # OpenAPI route definitions + exported route types
+  handlers.ts            # HTTP handlers (imperative shell)
+  users.errors.ts        # Domain error type variants
+  users.repository.ts    # Data access functions (return Result, never throw)
+  users.usecases.ts      # Pure business logic (add when needed)
+  __tests__/
+    users.usecases.test.ts    # Pure unit tests (no DB)
+    users.repository.test.ts  # Integration tests (real DB)
+    handlers.test.ts          # HTTP integration tests (full stack via app.request)
 ```
+
+The `usecases.ts` file is **optional** — add it when business rules exist that are worth testing in isolation. Skip it for pure CRUD modules.
 
 **Naming conventions**:
 
-| Pattern | Meaning |
-|---------|---------|
-| `*.usecase.ts` | Business logic, pure functions |
-| `*.repo.port.ts` | Data access interface |
-| `*.repo.drizzle.ts` | Drizzle implementation |
-| `*.repo.memory.ts` | In-memory implementation (for tests) |
-| `*.policy.ts` | Business rules, pure functions |
+| File | Purpose |
+|------|---------|
+| `*.errors.ts` | Domain error discriminated union types |
+| `*.repository.ts` | Data access — `tryInfra`, `Result`, never throws |
+| `*.usecases.ts` | Pure business logic — no DB imports, no async |
+| `routes.ts` | `createRoute` definitions + exported route types |
+| `handlers.ts` | `AppRouteHandler` implementations |
+| `index.ts` | Creates router, wires routes → handlers, default export |
 
 ---
 
-## Dependency Injection Style
+## Dependency Management
 
-**Choice**: Function parameter injection, not containers
+**Choice**: Direct imports, no DI container
 
 **Why**:
 
-1. **Explicit** — Dependencies are visible in the function signature.
+Repositories and use-cases are module-level functions, not classes. Their dependencies (the `db` connection, `env` config) are imported directly at module scope.
 
-2. **Simple** — No DI container to learn, configure, or debug.
+This works because:
+- The DB is a single Postgres connection pool shared across the process
+- Tests use environment-specific config (`.env.test` → different DB URL in CI if needed)
+- Use-cases are pure functions with no dependencies at all
+- There is nothing to swap at runtime
 
-3. **Testable** — Pass mocks directly. No container overrides.
-
-```typescript
-// Dependencies are just parameters
-async function createUserUseCase(
-  deps: {
-    userRepo: UserRepo;
-    emailService: EmailService;
-  },
-  input: CreateUserInput
-) {
-  // Use deps.userRepo, deps.emailService
-}
-
-// In handlers — wire real implementations
-const result = await createUserUseCase(
-  { userRepo, emailService },
-  input
-);
-
-// In tests — wire mocks
-const result = await createUserUseCase(
-  { userRepo: mockUserRepo, emailService: mockEmailService },
-  input
-);
-```
+Adding a DI container (tsyringe, inversify, etc.) would require decorators, a reflect-metadata polyfill, class-based repositories, and configuration that provides no practical benefit over direct imports at this scale.
 
 **Trade-offs**:
 
-- Manual wiring (but it's explicit)
-- No automatic singleton management
-- No lifecycle hooks
-
-For this scale, the simplicity wins.
+- No runtime swapping of implementations
+- Tighter coupling between repository functions and the `db` singleton (acceptable — it's the intended deployment model)

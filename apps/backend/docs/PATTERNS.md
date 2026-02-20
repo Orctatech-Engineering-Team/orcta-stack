@@ -6,7 +6,7 @@ Recipes for common tasks.
 
 ## Creating a Complete Module
 
-Here's a full example of a `posts` module with CRUD operations.
+Full example: a `posts` module.
 
 ### 1. Define the Schema
 
@@ -39,116 +39,77 @@ Export from `packages/db/src/schema/index.ts`:
 export * from "./posts";
 ```
 
-### 2. Define the Repository
+### 2. Define Domain Errors
 
-`apps/backend/src/modules/posts/posts.repo.port.ts`:
+`apps/backend/src/modules/posts/posts.errors.ts`:
 
 ```typescript
-import type { Post, InsertPost } from "@repo/db/schema";
+// Expected, business-rule failures — not bugs.
+// Each variant carries exactly the data a handler needs.
+export type PostNotFound = { type: "POST_NOT_FOUND"; lookup: string };
+export type NotPostAuthor = { type: "NOT_POST_AUTHOR"; userId: string; postId: string };
 
-export interface PostRepo {
-  findById(id: string): Promise<Post | undefined>;
-  findByAuthor(authorId: string): Promise<Post[]>;
-  list(options: { limit: number; offset: number }): Promise<Post[]>;
-  insert(data: InsertPost): Promise<Post>;
-  update(id: string, data: Partial<InsertPost>): Promise<Post | undefined>;
-  delete(id: string): Promise<boolean>;
-}
+export type PostRepoError = PostNotFound | NotPostAuthor;
 ```
 
-`apps/backend/src/modules/posts/posts.repo.drizzle.ts`:
+### 3. Write the Repository
+
+`apps/backend/src/modules/posts/posts.repository.ts`:
 
 ```typescript
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { posts } from "@repo/db/schema";
-import { eq } from "drizzle-orm";
-import type { PostRepo } from "./posts.repo.port";
+import { ok, err } from "@repo/shared";
+import type { Result } from "@repo/shared";
+import { InfrastructureError } from "@/lib/error";
+import { tryInfra } from "@/lib/infra";
+import type { Post, InsertPost } from "@repo/db/schema";
+import type { PostNotFound } from "./posts.errors";
 
-export const postRepo: PostRepo = {
-  async findById(id) {
-    return db.query.posts.findFirst({ where: eq(posts.id, id) });
-  },
-
-  async findByAuthor(authorId) {
-    return db.query.posts.findMany({ where: eq(posts.authorId, authorId) });
-  },
-
-  async list({ limit, offset }) {
-    return db.query.posts.findMany({ limit, offset, orderBy: (p, { desc }) => desc(p.createdAt) });
-  },
-
-  async insert(data) {
-    const [post] = await db.insert(posts).values(data).returning();
-    return post;
-  },
-
-  async update(id, data) {
-    const [post] = await db.update(posts).set(data).where(eq(posts.id, id)).returning();
-    return post;
-  },
-
-  async delete(id) {
-    const result = await db.delete(posts).where(eq(posts.id, id));
-    return result.rowCount > 0;
-  },
-};
-```
-
-### 3. Write Use-Cases
-
-`apps/backend/src/modules/posts/usecases/create-post.usecase.ts`:
-
-```typescript
-import type { PostRepo } from "../posts.repo.port";
-import type { Post } from "@repo/db/schema";
-
-interface Deps {
-  postRepo: Pick<PostRepo, "insert">;
+export async function findPostById(
+  id: string,
+): Promise<Result<Post, PostNotFound | InfrastructureError>> {
+  const result = await tryInfra(`fetch post ${id}`, () =>
+    db.query.posts.findFirst({ where: eq(posts.id, id) }),
+  );
+  if (!result.ok) return result;
+  if (!result.value) return err({ type: "POST_NOT_FOUND", lookup: id });
+  return ok(result.value);
 }
 
-interface Input {
-  authorId: string;
-  title: string;
-  content: string;
+export async function createPost(
+  data: InsertPost,
+): Promise<Result<Post, InfrastructureError>> {
+  const result = await tryInfra("create post", () =>
+    db.insert(posts).values(data).returning().then((rows) => rows[0]),
+  );
+  if (!result.ok) return result;
+  if (!result.value) return err(new InfrastructureError("Insert returned no rows"));
+  return ok(result.value);
 }
 
-type Result =
-  | { type: "CREATED"; post: Post }
-  | { type: "TITLE_TOO_SHORT" };
-
-export async function createPostUseCase(deps: Deps, input: Input): Promise<Result> {
-  if (input.title.length < 3) {
-    return { type: "TITLE_TOO_SHORT" };
-  }
-
-  const post = await deps.postRepo.insert({
-    authorId: input.authorId,
-    title: input.title,
-    content: input.content,
-  });
-
-  return { type: "CREATED", post };
-}
-```
-
-`apps/backend/src/modules/posts/usecases/get-post.usecase.ts`:
-
-```typescript
-import type { PostRepo } from "../posts.repo.port";
-import type { Post } from "@repo/db/schema";
-
-interface Deps {
-  postRepo: Pick<PostRepo, "findById">;
+export async function updatePost(
+  id: string,
+  data: Partial<InsertPost>,
+): Promise<Result<Post, PostNotFound | InfrastructureError>> {
+  const result = await tryInfra(`update post ${id}`, () =>
+    db.update(posts).set(data).where(eq(posts.id, id)).returning().then((rows) => rows[0]),
+  );
+  if (!result.ok) return result;
+  if (!result.value) return err({ type: "POST_NOT_FOUND", lookup: id });
+  return ok(result.value);
 }
 
-type Result =
-  | { type: "FOUND"; post: Post }
-  | { type: "NOT_FOUND" };
-
-export async function getPostUseCase(deps: Deps, id: string): Promise<Result> {
-  const post = await deps.postRepo.findById(id);
-  if (!post) return { type: "NOT_FOUND" };
-  return { type: "FOUND", post };
+export async function deletePost(
+  id: string,
+): Promise<Result<void, PostNotFound | InfrastructureError>> {
+  const result = await tryInfra(`delete post ${id}`, () =>
+    db.delete(posts).where(eq(posts.id, id)).returning().then((rows) => rows[0]),
+  );
+  if (!result.ok) return result;
+  if (!result.value) return err({ type: "POST_NOT_FOUND", lookup: id });
+  return ok(undefined);
 }
 ```
 
@@ -159,38 +120,34 @@ export async function getPostUseCase(deps: Deps, id: string): Promise<Result> {
 ```typescript
 import { createRoute, z } from "@hono/zod-openapi";
 import { selectPostSchema } from "@repo/db/schema";
+import { apiSuccessSchema, apiErrorSchema } from "@repo/shared";
+import {
+  jsonRes,
+  jsonBody,
+  OK,
+  CREATED,
+  UNAUTHORIZED,
+  NOT_FOUND,
+  INTERNAL_SERVER_ERROR,
+} from "@/lib/types";
 
 const tags = ["Posts"];
 
-const postResponse = z.object({
-  success: z.literal(true),
-  data: selectPostSchema,
-});
-
-const postsResponse = z.object({
-  success: z.literal(true),
-  data: z.array(selectPostSchema),
-});
+// Shared error responses — define once, reuse across routes in this module
+const e401 = jsonRes(apiErrorSchema, "Unauthorized");
+const e500 = jsonRes(apiErrorSchema, "Internal server error");
 
 export const createPost = createRoute({
   method: "post",
   path: "/posts",
   tags,
   request: {
-    body: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            title: z.string().min(3),
-            content: z.string().min(1),
-          }),
-        },
-      },
-    },
+    body: jsonBody(z.object({ title: z.string().min(3), content: z.string().min(1) })),
   },
   responses: {
-    201: { content: { "application/json": { schema: postResponse } }, description: "Created" },
-    400: { description: "Invalid input" },
+    [CREATED]: jsonRes(apiSuccessSchema(selectPostSchema), "Created"),
+    [UNAUTHORIZED]: e401,
+    [INTERNAL_SERVER_ERROR]: e500,
   },
 });
 
@@ -198,82 +155,90 @@ export const getPost = createRoute({
   method: "get",
   path: "/posts/{id}",
   tags,
-  request: {
-    params: z.object({ id: z.string() }),
-  },
+  request: { params: z.object({ id: z.string() }) },
   responses: {
-    200: { content: { "application/json": { schema: postResponse } }, description: "Found" },
-    404: { description: "Not found" },
-  },
-});
-
-export const listPosts = createRoute({
-  method: "get",
-  path: "/posts",
-  tags,
-  request: {
-    query: z.object({
-      limit: z.coerce.number().int().positive().max(100).default(20),
-      offset: z.coerce.number().int().min(0).default(0),
-    }),
-  },
-  responses: {
-    200: { content: { "application/json": { schema: postsResponse } }, description: "List" },
+    [OK]: jsonRes(apiSuccessSchema(selectPostSchema), "Found"),
+    [UNAUTHORIZED]: e401,
+    [NOT_FOUND]: jsonRes(apiErrorSchema, "Not found"),
+    [INTERNAL_SERVER_ERROR]: e500,
   },
 });
 
 export type CreatePostRoute = typeof createPost;
 export type GetPostRoute = typeof getPost;
-export type ListPostsRoute = typeof listPosts;
 ```
 
-### 5. Write Handlers
+> **Every status code your handler returns must be declared in `responses`.** `AppRouteHandler` is type-safe against the route definition — returning an undeclared status (including 500) is a compile error. Always declare 500 if the handler calls a repository.
+
+### 5. Write Use-Cases (when needed)
+
+Add `posts.usecases.ts` only when business logic exists. These are **pure functions** — no DB imports, no async, no HTTP.
+
+`apps/backend/src/modules/posts/posts.usecases.ts`:
+
+```typescript
+import type { User, Post } from "@repo/db/schema";
+import type { NotPostAuthor } from "./posts.errors";
+import { ok, err, type Result } from "@repo/shared";
+
+// Pure rule: can this user modify this post?
+export function authorizePostUpdate(
+  user: { id: string },
+  post: Post,
+): Result<Post, NotPostAuthor> {
+  if (post.authorId !== user.id)
+    return err({ type: "NOT_POST_AUTHOR", userId: user.id, postId: post.id });
+  return ok(post);
+}
+```
+
+For simple CRUD with no rules, skip this file entirely.
+
+---
+
+### 6. Write Handlers
 
 `apps/backend/src/modules/posts/handlers.ts`:
 
 ```typescript
 import type { AppRouteHandler } from "@/lib/types";
-import { success, failure } from "@/lib/types";
-import type { CreatePostRoute, GetPostRoute, ListPostsRoute } from "./routes";
-import { createPostUseCase } from "./usecases/create-post.usecase";
-import { getPostUseCase } from "./usecases/get-post.usecase";
-import { postRepo } from "./posts.repo.drizzle";
+import { success, failure, isInfraError, OK, CREATED, NOT_FOUND, INTERNAL_SERVER_ERROR } from "@/lib/types";
+import { match } from "@repo/shared";
+import type { CreatePostRoute, GetPostRoute } from "./routes";
+import { createPost, findPostById } from "./posts.repository";
 
 export const createPostHandler: AppRouteHandler<CreatePostRoute> = async (c) => {
   const userId = c.get("user").id;
   const body = c.req.valid("json");
 
-  const result = await createPostUseCase({ postRepo }, { authorId: userId, ...body });
+  const result = await createPost({ authorId: userId, ...body });
 
-  switch (result.type) {
-    case "CREATED":
-      return c.json(success(result.post), 201);
-    case "TITLE_TOO_SHORT":
-      return c.json(failure({ code: "TITLE_TOO_SHORT", message: "Title must be at least 3 characters" }), 400);
-  }
+  if (!result.ok)
+    return c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR);
+
+  return c.json(success(result.value), CREATED);
 };
 
 export const getPostHandler: AppRouteHandler<GetPostRoute> = async (c) => {
   const { id } = c.req.valid("param");
+  const result = await findPostById(id);
 
-  const result = await getPostUseCase({ postRepo }, id);
-
-  switch (result.type) {
-    case "FOUND":
-      return c.json(success(result.post), 200);
-    case "NOT_FOUND":
-      return c.json(failure({ code: "NOT_FOUND", message: "Post not found" }), 404);
-  }
-};
-
-export const listPostsHandler: AppRouteHandler<ListPostsRoute> = async (c) => {
-  const { limit, offset } = c.req.valid("query");
-  const posts = await postRepo.list({ limit, offset });
-  return c.json(success(posts), 200);
+  // match on ok/err, then switch on domain variants inside err
+  return match(result, {
+    ok: (post) => c.json(success(post), OK),
+    err: (e) => {
+      if (isInfraError(e))
+        return c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR);
+      switch (e.type) {
+        case "POST_NOT_FOUND":
+          return c.json(failure({ code: "NOT_FOUND", message: "Post not found" }), NOT_FOUND);
+      }
+    },
+  });
 };
 ```
 
-### 6. Wire It Up
+### 7. Wire It Up
 
 `apps/backend/src/modules/posts/index.ts`:
 
@@ -284,8 +249,7 @@ import * as handlers from "./handlers";
 
 const router = createRouter()
   .openapi(routes.createPost, handlers.createPostHandler)
-  .openapi(routes.getPost, handlers.getPostHandler)
-  .openapi(routes.listPosts, handlers.listPostsHandler);
+  .openapi(routes.getPost, handlers.getPostHandler);
 
 export default router;
 ```
@@ -295,6 +259,9 @@ Register in `apps/backend/src/routes/index.ts`:
 ```typescript
 import posts from "@/modules/posts";
 
+// publicRoutes are mounted before authMiddleware (e.g. health check)
+export const publicRoutes = [health];
+// routes are mounted under /api/* and protected by authMiddleware
 export const routes = [posts];
 ```
 
@@ -306,28 +273,17 @@ export const routes = [posts];
 
 ```typescript
 // In app.ts — protect all /api/* routes
-app.use("/api/*", authMiddleware());
+import { authMiddleware } from "@/middlewares/auth";
 
-// Public routes go before the middleware
-for (const route of publicRoutes) {
-  app.route("/api", route);
-}
-
-app.use("/api/*", authMiddleware());
-
-for (const route of routes) {
-  app.route("/api", route);
-}
+app.use("/api/*", authMiddleware);
 ```
 
 ### Accessing User in Handlers
 
 ```typescript
 export const handler: AppRouteHandler<Route> = async (c) => {
-  const user = c.get("user");     // { id, email, name, role }
+  const user = c.get("user");      // { id, email, name, role }
   const session = c.get("session"); // { id, userId, expiresAt }
-
-  // Use user.id for ownership checks, etc.
 };
 ```
 
@@ -336,330 +292,297 @@ export const handler: AppRouteHandler<Route> = async (c) => {
 ```typescript
 import { requireRole } from "@/middlewares/auth";
 
-// In module index.ts
+// Per-router
 const router = createRouter()
-  .use(requireRole("admin"))  // All routes in this router require admin
+  .use(requireRole("admin"))
   .openapi(routes.adminOnly, handlers.adminOnlyHandler);
 
-// Or per-route in app.ts
+// Or per-path in app.ts
 app.use("/api/admin/*", requireRole("admin"));
 ```
 
-### Owner-Only Access
+### Ownership Checks
+
+Put ownership rules in a use-case — pure function, no DB. The handler loads the data (imperative shell) and delegates the rule (functional core):
 
 ```typescript
+// posts.usecases.ts
+export function authorizePostUpdate(
+  user: { id: string },
+  post: Post,
+): Result<Post, NotPostAuthor> {
+  if (post.authorId !== user.id)
+    return err({ type: "NOT_POST_AUTHOR", userId: user.id, postId: post.id });
+  return ok(post);
+}
+
+// handlers.ts
 export const updatePostHandler: AppRouteHandler<UpdatePostRoute> = async (c) => {
-  const userId = c.get("user").id;
+  const user = c.get("user");
   const { id } = c.req.valid("param");
+  const body = c.req.valid("json");
 
-  const post = await postRepo.findById(id);
+  const found = await findPostById(id);
+  if (!found.ok)
+    return isInfraError(found.error)
+      ? c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR)
+      : c.json(failure({ code: "NOT_FOUND", message: "Post not found" }), NOT_FOUND);
 
-  if (!post) {
-    return c.json(failure({ code: "NOT_FOUND", message: "Post not found" }), 404);
-  }
+  const authorized = authorizePostUpdate(user, found.value);
+  if (!authorized.ok)
+    return c.json(failure({ code: "FORBIDDEN", message: "Not your post" }), FORBIDDEN);
 
-  if (post.authorId !== userId) {
-    return c.json(failure({ code: "FORBIDDEN", message: "Not your post" }), 403);
-  }
-
-  // Proceed with update...
+  const result = await updatePost(id, body);
+  return match(result, {
+    ok: (post) => c.json(success(post), OK),
+    err: (e) => {
+      if (isInfraError(e))
+        return c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR);
+      switch (e.type) {
+        case "POST_NOT_FOUND":
+          return c.json(failure({ code: "NOT_FOUND", message: "Post not found" }), NOT_FOUND);
+      }
+    },
+  });
 };
 ```
 
 ---
 
-## Error Handling Patterns
-
-### Wrapping Infrastructure Calls
+## Result Helpers
 
 ```typescript
-import { InfrastructureError } from "@/lib/error";
-
-export async function findById(id: string): Promise<User | undefined> {
-  try {
-    return await db.query.users.findFirst({ where: eq(users.id, id) });
-  } catch (error) {
-    throw new InfrastructureError("Database error fetching user", error);
-  }
-}
+import { ok, err, map, andThen, andThenAsync, match } from "@repo/shared";
 ```
 
-### Handling in Use-Cases
+### `match` — handle both branches in a handler
+
+`match` handles the ok/err split. When the error union has multiple variants, use `switch` inside the `err` branch — TypeScript will tell you if you miss one:
 
 ```typescript
-type Result =
-  | { type: "SUCCESS"; data: User }
-  | { type: "NOT_FOUND" }
-  | { type: "INFRASTRUCTURE_ERROR"; error: Error };
-
-export async function getUser(deps: Deps, id: string): Promise<Result> {
-  try {
-    const user = await deps.userRepo.findById(id);
-    if (!user) return { type: "NOT_FOUND" };
-    return { type: "SUCCESS", data: user };
-  } catch (error) {
-    return { type: "INFRASTRUCTURE_ERROR", error: error as Error };
-  }
-}
+const result = await findPostById(id);
+return match(result, {
+  ok: (post) => c.json(success(post), OK),
+  err: (e) => {
+    if (isInfraError(e))
+      return c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR);
+    switch (e.type) {
+      case "POST_NOT_FOUND":
+        return c.json(failure({ code: "NOT_FOUND", message: "Post not found" }), NOT_FOUND);
+      case "NOT_POST_AUTHOR":
+        return c.json(failure({ code: "FORBIDDEN", message: "Not your post" }), FORBIDDEN);
+    }
+  },
+});
 ```
 
-### Mapping in Handlers
+The ternary shorthand is only appropriate when there is exactly one domain error variant.
+
+### `andThenAsync` — chain two async repository calls
 
 ```typescript
-switch (result.type) {
-  case "SUCCESS":
-    return c.json(success(result.data), 200);
-  case "NOT_FOUND":
-    return c.json(failure({ code: "NOT_FOUND", message: "User not found" }), 404);
-  case "INFRASTRUCTURE_ERROR":
-    c.get("logger").error(result.error); // Log the real error
-    return c.json(failure({ code: "INTERNAL_ERROR", message: "Something went wrong" }), 500);
-}
+// Equivalent to: fetch user, then if ok, create post
+const result = await andThenAsync(
+  await findUserById(userId),
+  (user) => createPost({ authorId: user.id, ...body }),
+);
+```
+
+Compare with the explicit form — use whichever reads more clearly:
+
+```typescript
+const userResult = await findUserById(userId);
+if (!userResult.ok) return userResult;
+const postResult = await createPost({ authorId: userResult.value.id, ...body });
+```
+
+### `map` — transform the value, pass error through
+
+```typescript
+// Pluck just the ID from a successful fetch
+const idResult = map(await findPostById(id), (post) => post.id);
 ```
 
 ---
 
 ## Pagination Pattern
 
-### In Repository
+### Repository
 
 ```typescript
-interface ListOptions {
+export async function listPosts(options: {
   limit: number;
   offset: number;
-  orderBy?: "createdAt" | "updatedAt";
-  order?: "asc" | "desc";
-}
-
-interface PaginatedResult<T> {
-  data: T[];
-  total: number;
-}
-
-async list(options: ListOptions): Promise<PaginatedResult<Post>> {
-  const [data, countResult] = await Promise.all([
-    db.query.posts.findMany({
-      limit: options.limit,
-      offset: options.offset,
-      orderBy: (p, { asc, desc }) =>
-        options.order === "asc"
-          ? asc(p[options.orderBy || "createdAt"])
-          : desc(p[options.orderBy || "createdAt"]),
-    }),
-    db.select({ count: sql<number>`count(*)` }).from(posts),
-  ]);
-
-  return { data, total: countResult[0].count };
+}): Promise<Result<{ data: Post[]; total: number }, InfrastructureError>> {
+  const result = await tryInfra("list posts", () =>
+    Promise.all([
+      db.query.posts.findMany({
+        limit: options.limit,
+        offset: options.offset,
+        orderBy: (p, { desc }) => desc(p.createdAt),
+      }),
+      db.select({ count: sql<number>`count(*)` }).from(posts).then((r) => Number(r[0].count)),
+    ]),
+  );
+  if (!result.ok) return result;
+  const [data, total] = result.value;
+  return ok({ data, total });
 }
 ```
 
-### In Route
-
-```typescript
-export const listPosts = createRoute({
-  // ...
-  request: {
-    query: z.object({
-      page: z.coerce.number().int().positive().default(1),
-      limit: z.coerce.number().int().positive().max(100).default(20),
-    }),
-  },
-  responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            success: z.literal(true),
-            data: z.array(postSchema),
-            pagination: z.object({
-              page: z.number(),
-              limit: z.number(),
-              total: z.number(),
-              totalPages: z.number(),
-            }),
-          }),
-        },
-      },
-    },
-  },
-});
-```
-
-### In Handler
+### Handler
 
 ```typescript
 export const listPostsHandler: AppRouteHandler<ListPostsRoute> = async (c) => {
   const { page, limit } = c.req.valid("query");
   const offset = (page - 1) * limit;
 
-  const { data, total } = await postRepo.list({ limit, offset });
-  const totalPages = Math.ceil(total / limit);
+  const result = await listPosts({ limit, offset });
+  if (!result.ok)
+    return c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR);
 
+  const { data, total } = result.value;
   return c.json({
     success: true,
     data,
-    pagination: { page, limit, total, totalPages },
-  }, 200);
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  }, OK);
 };
 ```
 
 ---
 
-## Testing Patterns
+## Testing
 
-### Unit Testing Use-Cases
+Three tiers. No mocks unless there is genuinely no alternative.
+
+### 1. Unit Testing Use-Cases
+
+Use-cases are pure functions — no DB, no HTTP, no mocks needed. Just call them with plain values.
+
+File: `modules/posts/__tests__/posts.usecases.test.ts`
 
 ```typescript
-import { describe, it, expect, vi } from "vitest";
-import { createPostUseCase } from "./create-post.usecase";
+import { describe, it, expect } from "vitest";
+import { authorizePostUpdate } from "../posts.usecases";
 
-describe("createPostUseCase", () => {
-  it("creates a post successfully", async () => {
-    const mockPost = { id: "1", title: "Hello", content: "World", authorId: "user-1" };
-    const deps = {
-      postRepo: {
-        insert: vi.fn().mockResolvedValue(mockPost),
-      },
-    };
+describe("authorizePostUpdate", () => {
+  const post = { id: "p1", authorId: "u1", title: "hi", content: "...", createdAt: new Date(), updatedAt: new Date() };
 
-    const result = await createPostUseCase(deps, {
-      authorId: "user-1",
-      title: "Hello",
-      content: "World",
-    });
-
-    expect(result).toEqual({ type: "CREATED", post: mockPost });
-    expect(deps.postRepo.insert).toHaveBeenCalledWith({
-      authorId: "user-1",
-      title: "Hello",
-      content: "World",
-    });
+  it("returns ok when user owns the post", () => {
+    const result = authorizePostUpdate({ id: "u1" }, post);
+    expect(result).toEqual({ ok: true, value: post });
   });
 
-  it("rejects short titles", async () => {
-    const deps = { postRepo: { insert: vi.fn() } };
-
-    const result = await createPostUseCase(deps, {
-      authorId: "user-1",
-      title: "Hi",
-      content: "World",
-    });
-
-    expect(result).toEqual({ type: "TITLE_TOO_SHORT" });
-    expect(deps.postRepo.insert).not.toHaveBeenCalled();
+  it("returns NOT_POST_AUTHOR when user does not own the post", () => {
+    const result = authorizePostUpdate({ id: "u2" }, post);
+    expect(result).toEqual({ ok: false, error: { type: "NOT_POST_AUTHOR", userId: "u2", postId: "p1" } });
   });
 });
 ```
 
-### Integration Testing Handlers
+Every business rule lives in a use-case. Every use-case is testable this way.
+
+### 2. Integration Testing Repositories
+
+Repositories talk directly to the DB — test them against a real test database, not mocks. Run a local Postgres instance (or Docker) configured via `.env.test`.
+
+File: `modules/posts/__tests__/posts.repository.test.ts`
 
 ```typescript
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
+import { createPost, findPostById } from "../posts.repository";
+import { db } from "@/db";
+import { schema } from "@/db";
+
+afterEach(async () => {
+  // Delete in FK-safe order. posts.authorId → users, so delete posts first
+  // if users are seeded, or just delete the leaf table when testing in isolation.
+  await db.delete(schema.posts);
+});
+
+describe("findPostById", () => {
+  it("returns POST_NOT_FOUND when no row exists", async () => {
+    const result = await findPostById("nonexistent");
+    expect(result).toEqual({ ok: false, error: { type: "POST_NOT_FOUND", lookup: "nonexistent" } });
+  });
+
+  it("returns the post when it exists", async () => {
+    const created = await createPost({ authorId: "u1", title: "hello", content: "world" });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    const found = await findPostById(created.value.id);
+    expect(found).toEqual({ ok: true, value: created.value });
+  });
+});
+```
+
+This tests the actual SQL queries, actual constraint errors, and actual `tryInfra` boundary behaviour.
+
+### 3. Integration Testing Handlers
+
+Test full HTTP flows against a real DB using `app.request()`. Auth is handled by signing up through the app — no mocks, no fake sessions.
+
+File: `modules/posts/__tests__/handlers.test.ts`
+
+```typescript
+import { describe, it, expect, afterEach } from "vitest";
 import app from "@/app";
+import { db } from "@/db";
+import { schema } from "@/db";
 
-describe("POST /api/posts", () => {
-  let authCookie: string;
-
-  beforeAll(async () => {
-    // Login and get cookie
-    const res = await app.request("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email: "test@test.com", password: "password" }),
-      headers: { "Content-Type": "application/json" },
-    });
-    authCookie = res.headers.get("set-cookie") || "";
+// Sign up via the app + extract the session cookie (autoSignIn: true)
+async function signUp(email = "test@example.com", password = "password-123") {
+  const res = await app.request("/api/auth/sign-up/email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password, name: "Test" }),
   });
+  return res.headers.get("set-cookie") ?? "";
+}
 
-  it("creates a post", async () => {
-    const res = await app.request("/api/posts", {
-      method: "POST",
-      body: JSON.stringify({ title: "Test Post", content: "Content" }),
-      headers: {
-        "Content-Type": "application/json",
-        Cookie: authCookie,
-      },
-    });
+afterEach(async () => {
+  await db.delete(schema.verifications); // no FK cascade
+  await db.delete(schema.users);         // cascades sessions + accounts
+});
 
-    expect(res.status).toBe(201);
-    const body = await res.json();
-    expect(body.success).toBe(true);
-    expect(body.data.title).toBe("Test Post");
-  });
-
-  it("rejects unauthenticated requests", async () => {
-    const res = await app.request("/api/posts", {
-      method: "POST",
-      body: JSON.stringify({ title: "Test", content: "Content" }),
-      headers: { "Content-Type": "application/json" },
-    });
-
+describe("GET /api/posts/:id", () => {
+  it("returns 401 when not authenticated", async () => {
+    const res = await app.request("/api/posts/nonexistent");
     expect(res.status).toBe(401);
   });
+
+  it("returns 404 for unknown post", async () => {
+    const cookie = await signUp();
+    const res = await app.request("/api/posts/nonexistent", {
+      headers: { Cookie: cookie },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 200 with the post when it exists", async () => {
+    const cookie = await signUp();
+    // Seed directly via DB for speed, not through the API
+    const [post] = await db.insert(schema.posts)
+      .values({ title: "hello", content: "world", authorId: "u1" })
+      .returning();
+    const res = await app.request(`/api/posts/${post.id}`, {
+      headers: { Cookie: cookie },
+    });
+    expect(res.status).toBe(200);
+    // biome-ignore lint/suspicious/noExplicitAny: test assertion convenience
+    const body = (await res.json()) as any;
+    expect(body.data.id).toBe(post.id);
+  });
 });
 ```
 
----
+### When Mocks Are Acceptable
 
-## WebSocket Patterns
+Only when the real thing cannot run in a test environment:
+- External email/SMS providers (mock the transport, not the business logic)
+- Third-party payment APIs (Stripe, etc.)
+- External webhooks or OAuth flows
 
-### Setting Up WebSocket Route
-
-```typescript
-import { createNodeWebSocket } from "@hono/node-ws";
-import { wsManager } from "@/lib/ws";
-
-const { upgradeWebSocket, injectWebSocket } = createNodeWebSocket({ app });
-
-app.get("/ws", upgradeWebSocket((c) => {
-  const connectionId = crypto.randomUUID();
-
-  return {
-    onOpen(event, ws) {
-      wsManager.add(connectionId, ws);
-      ws.send(JSON.stringify({ type: "connected", id: connectionId }));
-    },
-
-    onMessage(event, ws) {
-      const message = JSON.parse(event.data.toString());
-
-      switch (message.type) {
-        case "join":
-          wsManager.join(connectionId, message.room);
-          break;
-        case "leave":
-          wsManager.leave(connectionId, message.room);
-          break;
-        case "broadcast":
-          wsManager.broadcast(message.room, message.data, connectionId);
-          break;
-      }
-    },
-
-    onClose() {
-      wsManager.remove(connectionId);
-    },
-  };
-}));
-
-// Inject into server
-const server = serve({ fetch: app.fetch, port: 9999 });
-injectWebSocket(server);
-```
-
-### Broadcasting from Use-Cases
-
-```typescript
-import { wsManager } from "@/lib/ws";
-
-export async function createCommentUseCase(deps: Deps, input: Input): Promise<Result> {
-  const comment = await deps.commentRepo.insert(input);
-
-  // Notify everyone watching this post
-  wsManager.broadcast(`post:${input.postId}`, {
-    type: "new-comment",
-    data: comment,
-  });
-
-  return { type: "CREATED", comment };
-}
-```
+Do **not** mock the DB, Redis, or any infrastructure you can run locally.
