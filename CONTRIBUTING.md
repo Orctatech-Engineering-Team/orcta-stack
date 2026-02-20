@@ -96,4 +96,4 @@ update code
 
 ## Questions?
 
-Ask in the internal Slack channel or ping a team lead directly.
+Ask in the internal chat space channel or ping a team lead directly.
