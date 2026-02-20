@@ -50,6 +50,15 @@
       }
     }
   },
+  "css": {
+    "parser": {
+
+      "tailwindDirectives": true
+    },
+    "linter": {
+      "enabled": true
+    }
+  },
   "javascript": {
     "formatter": {
       "quoteStyle": "double"
