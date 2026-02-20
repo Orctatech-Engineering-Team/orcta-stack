@@ -1,0 +1,80 @@
+{
+	// ─── Biome ───────────────────────────────────────────────────────────────
+	//
+	// Only activate Biome LSP for workspace folders that contain a biome.json.
+	// This prevents Biome from trying to lint unrelated folders you may open.
+	"biome.requireConfiguration": true,
+
+	// ─── Editor: format & fix on save ────────────────────────────────────────
+	"editor.formatOnSave": true,
+	"editor.codeActionsOnSave": {
+		// Apply all safe Biome fixes (no-unused-vars removal, etc.) on save.
+		"source.fixAll.biome": "explicit",
+		// Sort imports via Biome's organizeImports on save.
+		// This replaces the need for a separate import-sorter extension.
+		"source.organizeImports.biome": "explicit"
+	},
+
+	// ─── Default formatter per language ──────────────────────────────────────
+	//
+	// Biome handles: JS · TS · JSX · TSX · JSON · JSONC · CSS · GraphQL.
+	// Setting it explicitly per language avoids the "multiple formatters"
+	// prompt and ensures Biome wins even if Prettier is installed globally.
+	"[javascript]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[javascriptreact]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[typescript]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[typescriptreact]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[json]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[jsonc]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[css]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+	"[graphql]": {
+		"editor.defaultFormatter": "biomejs.biome"
+	},
+
+	// ─── TypeScript ───────────────────────────────────────────────────────────
+	// Use the workspace TypeScript version (from node_modules) rather than
+	// VS Code's bundled one. Keeps type-checking consistent with tsc in CI.
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"typescript.enablePromptUseWorkspaceTsdk": true,
+
+	// ─── Tailwind CSS IntelliSense ────────────────────────────────────────────
+	// Tailwind v4 uses CSS @theme blocks instead of tailwind.config.js.
+	// Point the extension at index.css so it finds the @theme source.
+	"tailwindCSS.experimental.configFile": "apps/frontend/src/index.css",
+	// Treat clsx() and cn() arguments as Tailwind class lists for completion.
+	"tailwindCSS.classFunctions": ["clsx", "cn", "cva", "cx"],
+
+	// ─── Files ────────────────────────────────────────────────────────────────
+	// Don't show generated/build artefacts in the explorer; Biome also skips
+	// linting these (see overrides in biome.json).
+	"files.exclude": {
+		"**/node_modules": true,
+		"**/.git": true
+	},
+	"search.exclude": {
+		"**/node_modules": true,
+		"**/dist": true,
+		"**/.turbo": true,
+		"apps/frontend/src/routeTree.gen.ts": true,
+		"packages/db/migrations": true,
+		"pnpm-lock.yaml": true
+	},
+
+	// ─── Explorer ─────────────────────────────────────────────────────────────
+	// Compact single-child folders (e.g. apps/frontend/src) in the tree.
+	"explorer.compactFolders": false
+}

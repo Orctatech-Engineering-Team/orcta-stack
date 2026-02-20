@@ -1,0 +1,16 @@
+{
+	// Extensions recommended for everyone working in this repo.
+	// VS Code will prompt teammates to install these when they open the workspace.
+	"recommendations": [
+		// Biome — formatter, linter, import sorter. Replaces Prettier + ESLint.
+		"biomejs.biome",
+		// TanStack Router — file-based route generation awareness
+		"tanstack.router-vscode-plugin",
+		// Tailwind CSS IntelliSense — autocomplete for utility classes
+		"bradlc.vscode-tailwindcss",
+		// Prisma / Drizzle don't have great tooling yet, but these help with SQL
+		"inferrinizzard.prettier-sql-vscode",
+		// Dot-env syntax highlighting
+		"mikestead.dotenv"
+	]
+}

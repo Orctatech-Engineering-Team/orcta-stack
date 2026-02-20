@@ -12,7 +12,10 @@ tsconfig.tsbuildinfo
 .env.*.local
 
 # IDE
-.vscode/
+# Ignore personal VS Code files; track shared workspace config.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
