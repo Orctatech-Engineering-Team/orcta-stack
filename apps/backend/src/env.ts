@@ -37,6 +37,12 @@ const envSchema = z.object({
 	S3_ACCESS_KEY_ID: z.string().optional(),
 	S3_SECRET_ACCESS_KEY: z.string().optional(),
 
+	// Social OAuth (optional — only activate providers whose vars are set)
+	GOOGLE_CLIENT_ID: z.string().optional(),
+	GOOGLE_CLIENT_SECRET: z.string().optional(),
+	GITHUB_CLIENT_ID: z.string().optional(),
+	GITHUB_CLIENT_SECRET: z.string().optional(),
+
 	// Email
 	RESEND_API_KEY: z.string().optional(),
 
