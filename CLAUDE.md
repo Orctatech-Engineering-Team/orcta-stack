@@ -41,7 +41,7 @@ Handlers switch on `result.type` and map to HTTP responses.
 
 ## Module Structure
 
-```
+```bash
 modules/{name}/
   routes.ts         # OpenAPI route definitions
   handlers.ts       # HTTP handlers
@@ -86,10 +86,12 @@ import { addJob } from "@/jobs";
 ## Environment
 
 Required in `.env`:
+
 - `DATABASE_URL`
 - `BETTER_AUTH_SECRET` (32+ chars)
 
 Optional:
+
 - `REDIS_URL` — for jobs/caching
 - `S3_*` — for file uploads
 - `RESEND_API_KEY` — for email

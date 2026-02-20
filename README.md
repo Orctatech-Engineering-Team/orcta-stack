@@ -165,7 +165,7 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the full guide.
 
 ## Project Layout
 
-```
+```bash
 apps/backend/src/
   modules/         ← Your features go here
   lib/             ← Reusable utilities

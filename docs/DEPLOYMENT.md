@@ -2,8 +2,6 @@
 
 Get your app live in 15 minutes.
 
----
-
 ## TL;DR
 
 | Part | Where | Cost |
@@ -13,26 +11,25 @@ Get your app live in 15 minutes.
 | Database | Supabase, Neon, or Railway | Free tier available |
 | Redis | Upstash or Railway | Free tier available |
 
----
-
 ## 1. Database
 
 Pick one. All have free tiers.
 
 ### Supabase (recommended)
+
 1. Create project at [supabase.com](https://supabase.com)
 2. Go to Settings → Database → Connection string
 3. Copy the `postgres://` URL
 
 ### Neon
+
 1. Create project at [neon.tech](https://neon.tech)
 2. Copy connection string from dashboard
 
 ### Railway
+
 1. Create PostgreSQL service at [railway.app](https://railway.app)
 2. Copy `DATABASE_URL` from Variables tab
-
----
 
 ## 2. Backend
 
@@ -44,14 +41,14 @@ Pick one. All have free tiers.
 4. Set root directory to `apps/backend`
 5. Add environment variables:
 
-```
+```env
 DATABASE_URL=postgres://...
 BETTER_AUTH_SECRET=<your-secret>
 BETTER_AUTH_URL=https://<your-railway-url>
 FRONTEND_URL=https://<your-vercel-url>
 ```
 
-6. Railway auto-deploys on push
+1. Railway auto-deploys on push
 
 ### Option B: Any VPS (more control)
 
@@ -103,20 +100,18 @@ sudo systemctl reload caddy
 
 Vercel auto-deploys on every push.
 
----
-
 ## 4. Redis (if using jobs/caching)
 
 ### Upstash (recommended)
+
 1. Create database at [upstash.com](https://upstash.com)
 2. Copy the Redis URL
 3. Add to backend env: `REDIS_URL=redis://...`
 
 ### Railway
+
 1. Add Redis service to your project
 2. Copy `REDIS_URL` from Variables
-
----
 
 ## 5. File Storage (if using uploads)
 
@@ -126,7 +121,7 @@ Vercel auto-deploys on every push.
 2. Create API token with read/write permissions
 3. Add to backend env:
 
-```
+```env
 S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
 S3_BUCKET=your-bucket-name
 S3_ACCESS_KEY_ID=...
@@ -136,24 +131,25 @@ S3_REGION=auto
 
 ### AWS S3
 
-```
+```env
 S3_BUCKET=your-bucket
 S3_REGION=us-east-1
 S3_ACCESS_KEY_ID=...
 S3_SECRET_ACCESS_KEY=...
 ```
 
----
-
 ## 6. Background Jobs
 
 If you're using the job queue, run the worker alongside your API:
 
 ### Railway
+
 Add a second service pointing to the same repo:
+
 - **Start Command**: `pnpm --filter backend jobs`
 
 ### VPS
+
 ```bash
 docker run -d \
   --name worker \
@@ -199,8 +195,6 @@ LOG_LEVEL=info
 NODE_ENV=production
 ```
 
----
-
 ## Verify It Works
 
 ```bash
@@ -210,8 +204,6 @@ curl https://api.yourdomain.com/api/health
 # Should return:
 # {"success":true,"data":{"status":"healthy",...}}
 ```
-
----
 
 ## Troubleshooting
 

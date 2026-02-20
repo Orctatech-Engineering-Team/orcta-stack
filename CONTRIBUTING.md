@@ -66,7 +66,7 @@ try {
 
 Be specific. Say what changed and why.
 
-```
+```git
 # Good
 fix(auth): handle expired refresh tokens
 
