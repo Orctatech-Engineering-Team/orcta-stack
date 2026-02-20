@@ -94,6 +94,30 @@ https://www.better-auth.com
 
 ---
 
+## Observability
+
+*Decisions: wide events over scattered logs + metrics, tail-based sampling, Axiom, `addToEvent` as the instrumentation primitive. See the full rationale in [DECISIONS.md → Observability](./DECISIONS.md).*
+
+**Boris Tane — "Logging Sucks"** (loggingsucks.com, 2024)
+The most direct reference for our implementation. Walks through the core problem (17 log lines per request that tell you nothing), defines the vocabulary (cardinality, dimensionality, wide events, canonical log lines), shows the implementation pattern step by step, and covers tail-based sampling. The `wideEventMiddleware` and `addToEvent` pattern in this codebase follows this implementation guide directly.
+https://loggingsucks.com
+
+**Charity Majors — Blog and talks (Honeycomb)**
+The originator of the "high-cardinality observability" argument. Her central claim: traditional logging and APM are broken because they force you to pre-aggregate before storage, discarding the individual request data you need to debug production. You need to store raw events in a column-oriented store and query them at debug time — not grep them.
+- "Observability — The 5-Year Retrospective": https://charity.wtf/2020/03/03/observability-is-a-many-splendored-thing/
+- "Is This Just Metrics?": https://charity.wtf/2022/08/12/is-this-just-metrics/
+- "High Cardinality is Not the Same As High Dimensionality": https://charity.wtf/2021/08/09/notes-on-the-art-of-measuring-things/
+
+**Stripe Engineering — "Canonical Log Lines"**
+The origin of the term. Stripe's approach: each service emits one structured log line per request containing all the context needed to understand what happened. This is the "canonical log line" that `wideEventMiddleware` implements.
+https://stripe.com/blog/canonical-log-lines
+
+**Honeycomb documentation — "Core Analysis Loop"**
+The mental model for debugging with events: start with a wide query (error rate), narrow by cardinality (which user_id?), expand to see the full event context. This is the loop Axiom's APL enables on our wide events.
+https://docs.honeycomb.io/investigate-incidents-faster/
+
+---
+
 ## Summary Table
 
 | Resource | Author | Format | Why it matters here |
@@ -106,3 +130,6 @@ https://www.better-auth.com
 | "Integrated Tests Are a Scam" | J.B. Rainsberger | Article | Real DB over mocks |
 | "Test Double" | Martin Fowler | Article | When mocks are actually appropriate |
 | *A Philosophy of Software Design* | John Ousterhout | Book | Deep modules, reducing complexity |
+| "Logging Sucks" | Boris Tane | Article | Wide events implementation pattern |
+| "Observability Requires Rethinking Logging" | Charity Majors | Articles/Talks | High cardinality/dimensionality philosophy |
+| "Is This Just Metrics?" | Charity Majors | Article | Why metrics are not a substitute for events |

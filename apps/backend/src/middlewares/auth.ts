@@ -21,9 +21,14 @@ export async function authMiddleware(c: Context<AppEnv>, next: Next) {
 	c.set("user", session.user);
 	c.set("session", session.session);
 
-	// Enrich the wide event with user context so every authenticated request
-	// carries user.id and user.role without handlers needing to do it manually.
-	addToEvent(c, { user: { id: session.user.id, role: session.user.role ?? "user" } });
+	// Enrich the wide event with auth context so every authenticated request
+	// carries user identity and session ID without handlers doing it manually.
+	// session_id is distinct from user_id: one user can have many concurrent
+	// sessions across devices, making it a separate high-cardinality dimension.
+	addToEvent(c, {
+		session_id: session.session.id,
+		user: { id: session.user.id, role: session.user.role ?? "user" },
+	});
 
 	await next();
 }

@@ -40,8 +40,9 @@ const envSchema = z.object({
   AXIOM_TOKEN: z.string().optional(),
   AXIOM_DATASET: z.string().optional(),
 
-  // Deployment metadata (injected by CI as git SHA / region)
+  // Deployment metadata (injected by CI as git SHA / docker image tag / region)
   SERVICE_VERSION: z.string().default("local"),
+  DEPLOYMENT_ID: z.string().default("local"),
   REGION: z.string().default("local"),
 });
 

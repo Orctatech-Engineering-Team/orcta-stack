@@ -89,28 +89,60 @@ export const isInfraError = (e: unknown): e is InfrastructureError =>
 // Inspired by: https://loggingsucks.com — "Implementing Wide Events" section.
 
 export type WideEvent = {
-	// Populated by wideEventMiddleware
+	// ── Request context (populated by wideEventMiddleware) ───────────────────
 	request_id?: string;
+	// trace_id: forwarded from x-trace-id header when set by a gateway or client,
+	// otherwise equals request_id. Enables multi-service correlation without a
+	// full distributed tracing setup.
+	trace_id?: string;
 	timestamp?: string;
 	method?: string;
 	path?: string;
 	status_code?: number;
 	duration_ms?: number;
 	outcome?: "success" | "error";
+
+	// ── Infrastructure context (populated by wideEventMiddleware) ────────────
 	service?: string;
 	service_version?: string;
+	// deployment_id: the docker image tag / git SHA of the running process.
+	// Distinct from service_version: version tracks the code, deployment_id
+	// tracks the running artifact. Critical for "which deploy caused this?".
+	deployment_id?: string;
 	region?: string;
 	ip?: string;
 	user_agent?: string;
 
-	// Populated by authMiddleware
+	// ── Auth context (populated by authMiddleware) ────────────────────────────
+	// session_id: the better-auth session ID — high-cardinality, distinct from
+	// user_id. One user can have many concurrent sessions across devices.
+	session_id?: string;
 	user?: {
 		id: string;
 		role: string;
+		// Add subscription, plan, or any user attribute handlers want to query on.
+		// Example: addToEvent(c, { user: { ...existing, subscription: "pro" } })
 		[k: string]: unknown;
 	};
 
-	// Populated by handlers — business context
+	// ── Error context (set in wideEventMiddleware catch block) ───────────────
+	error?: {
+		type?: string;
+		message?: string;
+		// code: machine-readable error code (e.g. "card_declined", "rate_limited")
+		code?: string;
+		// retriable: is this a transient error worth retrying?
+		retriable?: boolean;
+		[k: string]: unknown;
+	};
+
+	// ── Business context (populated by handlers via addToEvent) ───────────────
+	// feature_flags: track which flags were active for this request.
+	// Used in tail sampling to always retain events from experimental rollouts.
+	// Example: addToEvent(c, { feature_flags: { new_checkout_flow: true } })
+	feature_flags?: Record<string, boolean>;
+
+	// Arbitrary handler-defined fields — business domain data.
 	[key: string]: unknown;
 };
 
