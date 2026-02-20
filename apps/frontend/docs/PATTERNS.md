@@ -804,3 +804,173 @@ if (error) {
   );
 }
 ```
+
+---
+
+## Service Files — `queryOptions` Factories
+
+Define query options in a service file, not inline in a component. This makes them reusable across loaders, components, and tests — and keeps the query key co-located with the fetcher.
+
+```typescript
+// services/auth.ts
+import { queryOptions } from "@tanstack/react-query";
+import { authClient } from "@/lib/auth-client";
+
+export const sessionQueryOptions = queryOptions({
+  queryKey: ["auth", "session"] as const,
+  queryFn: () => authClient.getSession().then((r) => r.data ?? null),
+  staleTime: 1000 * 60 * 5,
+});
+```
+
+Use the same options object in the router loader and the component:
+
+```typescript
+// Route loader — runs before render, no loading state needed
+loader: ({ context: { queryClient } }) =>
+  queryClient.ensureQueryData(sessionQueryOptions),
+
+// Component — reads from cache, no extra fetch
+const session = Route.useLoaderData();
+```
+
+Name service files after the domain they serve: `services/auth.ts`, `services/users.ts`, `services/posts.ts`.
+
+---
+
+## Auth Guards with `beforeLoad`
+
+Protect routes at the router level — not inside the component. `beforeLoad` runs before the component mounts; if a redirect is thrown, the component never renders.
+
+### Protected route
+
+```typescript
+// routes/dashboard.tsx
+export const Route = createFileRoute("/dashboard")({
+  beforeLoad: ({ context }) => {
+    // context.session was set by the root beforeLoad.
+    // If null, redirect to /login before the page loads.
+    if (!context.session) {
+      throw redirect({ to: "/login" });
+    }
+  },
+  component: DashboardPage,
+});
+
+function DashboardPage() {
+  // session is null-narrowed away by the guard above.
+  // The null check here is defensive — it satisfies TypeScript.
+  const { session } = Route.useRouteContext();
+  if (!session) return null;
+
+  return <div>Hello, {session.user.name}</div>;
+}
+```
+
+### Redirect authenticated users away from login/register
+
+```typescript
+// routes/login.tsx
+export const Route = createFileRoute("/login")({
+  beforeLoad: ({ context }) => {
+    if (context.session) {
+      throw redirect({ to: "/dashboard" });
+    }
+  },
+  component: LoginPage,
+});
+```
+
+### How the root feeds session into context
+
+```typescript
+// routes/__root.tsx
+export const Route = createRootRouteWithContext<RouterContext>()({
+  beforeLoad: async ({ context }) => {
+    const session = await context.queryClient.ensureQueryData(sessionQueryOptions);
+    return { session };  // Available as context.session on all child routes
+  },
+});
+```
+
+### After a mutation that changes auth state (signIn, signOut, signUp)
+
+```typescript
+// Invalidate first, then navigate.
+// The router re-runs beforeLoad, which calls ensureQueryData.
+// Because the query is stale (invalidated), it refetches, and context.session
+// is updated before the new route's component renders.
+await queryClient.invalidateQueries({ queryKey: sessionQueryOptions.queryKey });
+navigate({ to: "/dashboard" });
+```
+
+---
+
+## Form Submitting State
+
+TanStack Form tracks its own submitting state. You do not need `useState`.
+
+```typescript
+// ✗ Don't do this
+const [isLoading, setIsLoading] = useState(false);
+const form = useForm({
+  onSubmit: async ({ value }) => {
+    setIsLoading(true);
+    try { /* ... */ } finally { setIsLoading(false); }
+  },
+});
+<button disabled={isLoading}>{isLoading ? "Loading..." : "Submit"}</button>
+
+// ✓ Do this
+const form = useForm({
+  onSubmit: async ({ value }) => {
+    // TanStack Form sets isSubmitting = true automatically for onSubmit's duration.
+    // No manual state management needed.
+  },
+});
+
+<form.Subscribe selector={(s) => s.isSubmitting}>
+  {(isSubmitting) => (
+    <button type="submit" disabled={isSubmitting}>
+      {isSubmitting ? "Loading..." : "Submit"}
+    </button>
+  )}
+</form.Subscribe>
+```
+
+---
+
+## Handling API Errors
+
+`api.ts` throws `ApiError` for non-2xx responses. Check the status code for specific handling:
+
+```typescript
+import { api, ApiError } from "@/lib/api";
+
+try {
+  await api.post("/api/posts", data);
+} catch (e) {
+  if (e instanceof ApiError) {
+    if (e.status === 409) {
+      toast.error("A post with that title already exists");
+      return;
+    }
+    if (e.status === 422) {
+      toast.error("Invalid data");
+      return;
+    }
+  }
+  toast.error("Something went wrong");
+}
+```
+
+For queries, use `onError` or `throwOnError` in `queryOptions`:
+
+```typescript
+export const postsQueryOptions = queryOptions({
+  queryKey: ["posts"],
+  queryFn: () => api.get<ApiSuccess<Post[]>>("/api/posts"),
+});
+```
+
+Errors surface in `useQuery()` as `error: ApiError` — typed, not opaque.

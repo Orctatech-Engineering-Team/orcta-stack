@@ -1,76 +1,81 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9999";
+const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:9999";
 
-interface ApiOptions extends RequestInit {
-  params?: Record<string, string>;
+// ─── Typed API error ──────────────────────────────────────────────────────────
+// Thrown for any non-2xx response so callers can distinguish HTTP failures
+// from network failures and check the status code programmatically.
+//
+// Example:
+//   try { await api.post("/api/orders", data) }
+//   catch (e) {
+//     if (e instanceof ApiError && e.status === 409) handleConflict()
+//   }
+export class ApiError extends Error {
+	constructor(
+		public readonly status: number,
+		message: string,
+		public readonly body: unknown,
+	) {
+		super(message);
+		this.name = "ApiError";
+	}
 }
 
-class ApiClient {
-  private baseUrl: string;
+// ─── Core fetch wrapper ───────────────────────────────────────────────────────
+// One function. No class. Uses the Fetch API directly — no third-party HTTP
+// client. Credentials included by default (cookie-based auth).
+async function request<T>(endpoint: string, init?: RequestInit): Promise<T> {
+	const response = await fetch(`${BASE_URL}${endpoint}`, {
+		...init,
+		credentials: "include",
+		headers: {
+			"Content-Type": "application/json",
+			...init?.headers,
+		},
+	});
 
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
-  }
+	if (!response.ok) {
+		const body = await response.json().catch(() => ({}));
+		throw new ApiError(
+			response.status,
+			(body as { error?: { message?: string } })?.error?.message ??
+				"Request failed",
+			body,
+		);
+	}
 
-  private async request<T>(
-    endpoint: string,
-    options: ApiOptions = {}
-  ): Promise<T> {
-    const { params, ...init } = options;
+	// 204 No Content — return undefined cast to T
+	if (response.status === 204) return undefined as T;
 
-    let url = `${this.baseUrl}${endpoint}`;
-    if (params) {
-      const searchParams = new URLSearchParams(params);
-      url += `?${searchParams.toString()}`;
-    }
-
-    const response = await fetch(url, {
-      ...init,
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...init.headers,
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.error?.message || "Request failed");
-    }
-
-    return response.json();
-  }
-
-  get<T>(endpoint: string, options?: ApiOptions): Promise<T> {
-    return this.request<T>(endpoint, { ...options, method: "GET" });
-  }
-
-  post<T>(endpoint: string, data?: unknown, options?: ApiOptions): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: "POST",
-      body: data ? JSON.stringify(data) : undefined,
-    });
-  }
-
-  put<T>(endpoint: string, data?: unknown, options?: ApiOptions): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: "PUT",
-      body: data ? JSON.stringify(data) : undefined,
-    });
-  }
-
-  patch<T>(endpoint: string, data?: unknown, options?: ApiOptions): Promise<T> {
-    return this.request<T>(endpoint, {
-      ...options,
-      method: "PATCH",
-      body: data ? JSON.stringify(data) : undefined,
-    });
-  }
-
-  delete<T>(endpoint: string, options?: ApiOptions): Promise<T> {
-    return this.request<T>(endpoint, { ...options, method: "DELETE" });
-  }
+	return response.json() as Promise<T>;
 }
 
-export const api = new ApiClient(API_URL);
+// ─── API surface ──────────────────────────────────────────────────────────────
+// Plain object of functions. Tree-shakeable. Same interface as before.
+export const api = {
+	get: <T>(endpoint: string, init?: RequestInit) =>
+		request<T>(endpoint, { ...init, method: "GET" }),
+
+	post: <T>(endpoint: string, data?: unknown, init?: RequestInit) =>
+		request<T>(endpoint, {
+			...init,
+			method: "POST",
+			body: data !== undefined ? JSON.stringify(data) : undefined,
+		}),
+
+	put: <T>(endpoint: string, data?: unknown, init?: RequestInit) =>
+		request<T>(endpoint, {
+			...init,
+			method: "PUT",
+			body: data !== undefined ? JSON.stringify(data) : undefined,
+		}),
+
+	patch: <T>(endpoint: string, data?: unknown, init?: RequestInit) =>
+		request<T>(endpoint, {
+			...init,
+			method: "PATCH",
+			body: data !== undefined ? JSON.stringify(data) : undefined,
+		}),
+
+	delete: <T>(endpoint: string, init?: RequestInit) =>
+		request<T>(endpoint, { ...init, method: "DELETE" }),
+};

@@ -435,3 +435,144 @@ routes/
     PostCard.tsx
     PostForm.tsx
 ```
+
+---
+
+## `queryOptions()` Factories over Inline Query Objects
+
+**Choice**: Define query options in service files, not inline in components.
+
+**Why**:
+
+Defining a query inline in a component creates three problems:
+
+1. You cannot use the same query in a route `loader` without duplicating the `queryKey` and `queryFn`.
+2. The query key is scattered — invalidating it requires remembering the exact string used in the component.
+3. It's harder to test; you'd need to render the component just to test the fetch logic.
+
+`queryOptions()` solves all three:
+
+```typescript
+// services/auth.ts — one definition, used everywhere
+export const sessionQueryOptions = queryOptions({
+  queryKey: ["auth", "session"] as const,
+  queryFn: () => authClient.getSession().then((r) => r.data ?? null),
+  staleTime: 1000 * 60 * 5,
+});
+
+// In a route loader:
+loader: ({ context: { queryClient } }) =>
+  queryClient.ensureQueryData(sessionQueryOptions),
+
+// In a component:
+const session = Route.useLoaderData();
+
+// When invalidating after a mutation:
+queryClient.invalidateQueries({ queryKey: sessionQueryOptions.queryKey });
+```
+
+One object. All usages point to the same key, staleTime, and fetcher. Rename it and TypeScript catches every consumer.
+
+**Trade-offs**:
+
+- One more file to create per domain
+- Pattern requires understanding TanStack Router's loader + context model
+
+---
+
+## `beforeLoad` for Auth Guards over Component-Level Redirects
+
+**Choice**: Auth checks in `beforeLoad`, not inside the rendered component.
+
+**Why**:
+
+The old pattern — `useQuery` for session inside the component, then `navigate()` if null — has three problems:
+
+1. **Flash of unauthenticated content**: The component renders (briefly showing the protected content or a loading spinner) before the redirect fires. With `beforeLoad`, the component never mounts if the guard fails.
+
+2. **Dependent state management**: You need `isLoading` + `if (!session) return null` — two extra states the component has to manage.
+
+3. **Escape from the component lifecycle**: Calling `navigate()` inside a `useEffect` or render is a side effect of the render phase, not a declarative description of what the route requires.
+
+`beforeLoad` is a declarative contract: "this route requires a session." The router enforces it before the component touches the DOM.
+
+```typescript
+// ✗ Component-level guard — the old React Router mental model
+function DashboardPage() {
+  const { data: session, isLoading } = useQuery({ queryKey: ["session"], ... });
+  if (isLoading) return <Spinner />;
+  if (!session) { navigate({ to: "/login" }); return null; }
+  return <div>{session.user.name}</div>;
+}
+
+// ✓ Router-level guard — declarative, no flash, no loading state
+export const Route = createFileRoute("/dashboard")({
+  beforeLoad: ({ context }) => {
+    if (!context.session) throw redirect({ to: "/login" });
+  },
+  component: DashboardPage,
+});
+
+function DashboardPage() {
+  const { session } = Route.useRouteContext();
+  if (!session) return null;  // Defensive — never reached
+  return <div>{session.user.name}</div>;
+}
+```
+
+The root route's `beforeLoad` fetches the session once and injects it into router context. All child routes read `context.session` without fetching again.
+
+**Trade-offs**:
+
+- Requires understanding TanStack Router's context model
+- `context.session` is typed as `Session | null` even on protected routes (TS can't narrow through `throw redirect()`); requires a defensive null check
+
+---
+
+## Plain Fetch API over HTTP Client Libraries
+
+**Choice**: `fetch` directly, wrapped in a thin `request()` function.
+
+**Why**:
+
+The browser's `fetch` API is a web standard. Libraries like `axios`, `ky`, and `got` add:
+- Interceptors (you can do this with a wrapper function)
+- Automatic retries (handle in `queryOptions.retry`)
+- Request cancellation (use `AbortSignal` from the `loader` context)
+- Error normalisation (our `ApiError` class does this)
+
+None of these require a library. `fetch` supports all of them natively or via `@tanstack/react-query`'s built-in mechanisms.
+
+The `api` object in `lib/api.ts` is a plain object of functions — not a class instance. This is intentionally simpler: no `new`, no `this`, tree-shakeable, testable by calling the functions directly.
+
+**The shift**: `ApiError` is thrown for non-2xx responses and carries `status` and `body`. Callers check `instanceof ApiError` for specific status handling and fall back to a generic message otherwise. This replaces the opaque `Error("Request failed")` that an unmaintained class was throwing.
+
+**Trade-offs**:
+
+- No interceptors (add a wrapper if upload progress or auth headers become necessary)
+- Manual `Content-Type` header (acceptable — all our API calls are JSON)
+
+---
+
+## No Global Auth State (Zustand/Context) — Use the Query Cache
+
+**Choice**: Session state lives in the React Query cache (`["auth", "session"]`), not a Zustand store or React context.
+
+**Why**:
+
+A common pattern is to create a `useAuthStore` or `AuthContext` to hold the current user. This creates a redundant source of truth that can drift from the server state.
+
+The query cache *is* the client-side state for server data. The session is server state. It:
+- Has a known staleness (5 minutes)
+- Must be re-fetched after mutations (signIn/signOut)
+- Can be invalidated from anywhere via `queryClient.invalidateQueries`
+
+Zustand is reserved for *UI state* — things with no server equivalent (sidebar open/closed, modal state, selected tab). Anything that has a server source lives in the React Query cache.
+
+| State | Solution |
+|---|---|
+| Current user session | React Query `sessionQueryOptions` |
+| Server resource (posts, users) | React Query `queryOptions` |
+| Form state | TanStack Form |
+| URL/navigation state | TanStack Router search params |
+| UI-only state (modals, sidebar) | Zustand |
