@@ -1,0 +1,49 @@
+# Production docker-compose — used by the CD pipeline on the VPS.
+# Dev services (MinIO, exposed DB ports) are intentionally excluded.
+#
+# The backend image is built by CI and pushed to GHCR.
+# Required: .env.production on the VPS (never committed to git).
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-orcta}
+      POSTGRES_USER: ${POSTGRES_USER:-orcta}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-orcta}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: ghcr.io/orctatech-engineering-team/orcta-backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file: .env.production
+    ports:
+      - "9999:9999"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
