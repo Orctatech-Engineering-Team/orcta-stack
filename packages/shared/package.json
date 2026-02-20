@@ -24,13 +24,15 @@
     "build": "tsc --build",
     "dev": "tsc --build --watch",
     "typecheck": "tsc --noEmit",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "test": "vitest run"
   },
   "dependencies": {
     "zod": "^4.2.1"
   },
   "devDependencies": {
     "rimraf": "^6.1.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16"
   }
 }
