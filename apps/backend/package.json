@@ -20,6 +20,7 @@
     "@asteasolutions/zod-to-openapi": "8.0.0",
     "@aws-sdk/client-s3": "^3.750.0",
     "@aws-sdk/s3-request-presigner": "^3.750.0",
+    "@axiomhq/pino": "^1.4.0",
     "@hono/node-server": "^1.19.7",
     "@hono/node-ws": "^1.2.0",
     "@hono/swagger-ui": "^0.5.3",
