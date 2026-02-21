@@ -1,6 +1,19 @@
 # CLAUDE.md
 
-Quick reference for working with this codebase.
+Quick reference for working with this codebase. Read [`AGENTS.md`](AGENTS.md) for work discipline, branching, and commit rules before starting any task.
+
+## Docs
+
+| Doc | What it covers |
+|-----|----------------|
+| `AGENTS.md` | **Work discipline, branching, commits, PRs — read first** |
+| `docs/PHILOSOPHY.md` | The beliefs behind every decision — why the codebase is shaped this way |
+| `CONTRIBUTING.md` | Full workflow for humans and agents |
+| `docs/BATTERIES.md` | Built-in utilities (auth, jobs, caching, etc.) |
+| `docs/DEPLOYMENT.md` | Production deployment guide |
+| `docs/WRITING.md` | Writing voice, style guide, and influences |
+| `apps/backend/docs/` | Backend architecture, patterns, decisions |
+| `apps/frontend/docs/` | Frontend patterns and decisions |
 
 ## Commands
 
@@ -43,14 +56,18 @@ Handlers switch on `result.type` and map to HTTP responses.
 
 ```bash
 modules/{name}/
-  routes.ts         # OpenAPI route definitions
-  handlers.ts       # HTTP handlers
-  index.ts          # Router wiring
-  {name}.repo.port.ts      # Repository interface
-  {name}.repo.drizzle.ts   # Repository implementation
+  routes.ts                    # OpenAPI route definitions + exported route types
+  handlers.ts                  # HTTP handlers (imperative shell)
+  index.ts                     # Creates router, wires routes → handlers
+  {name}.errors.ts             # Domain error type variants
+  {name}.repository.ts         # Data access — tryInfra, Result, never throws
   usecases/
-    create-{name}.usecase.ts
+    {name}.usecases.ts         # Pure business logic — no DB, no async
+  __tests__/
+    handlers.test.ts           # Integration tests via Hono testClient
 ```
+
+Generate with `pnpm new:module <name>`. The `usecases/` file is optional — add it when business rules are worth testing in isolation.
 
 ## Common Patterns
 

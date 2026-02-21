@@ -20,22 +20,34 @@ Backend runs on [localhost:9999](http://localhost:9999/docs). Frontend on [local
 
 ## Get Started
 
-You need Node 20+ and pnpm. That's it.
+This is a GitHub template. Click **Use this template** → **Create a new repository** on GitHub, then clone your new repo.
+
+You need Node 20+ and pnpm.
 
 ```bash
-git clone <this-repo> my-app
+git clone https://github.com/<your-org>/<your-repo> my-app
 cd my-app
 pnpm setup
 ```
 
-This installs dependencies and creates your `.env` file with a generated auth secret.
+`pnpm setup` installs dependencies and writes a `.env` file with a generated auth secret.
 
 Start the database:
 
 ```bash
 docker compose up -d    # Starts PostgreSQL + Redis
-pnpm db:migrate         # Creates tables
+pnpm db:migrate         # Creates the initial tables
 ```
+
+> **Note on auth tables:** Better Auth manages its own tables (users, sessions, accounts). The initial migration already includes them. If you add Better Auth plugins later (2FA, API keys, organisations, etc.), regenerate the schema first:
+>
+> ```bash
+> npx @better-auth/cli generate   # Updates packages/db/src/schema/ from your auth config
+> pnpm db:generate                # Creates the migration
+> pnpm db:migrate                 # Applies it
+> ```
+>
+> See the [Better Auth database docs](https://www.better-auth.com/docs/concepts/database) for the full reference.
 
 Run everything:
 
@@ -66,12 +78,31 @@ pnpm typecheck          # Check types
 pnpm new:module posts
 ```
 
-This creates `apps/backend/src/modules/posts/` with routes, handlers, and a use-case template. Register it in `apps/backend/src/routes/index.ts`:
+This scaffolds a complete module at `apps/backend/src/modules/posts/`:
+
+| File | Purpose |
+|------|---------|
+| `routes.ts` | OpenAPI route definitions with Zod schemas |
+| `handlers.ts` | HTTP handlers — reads input, calls repo, maps Result to response |
+| `posts.repository.ts` | Data access — uses `tryInfra`, returns `Result`, never throws |
+| `posts.errors.ts` | Typed domain error variants (`PostNotFound`, etc.) |
+| `usecases/` | Pure business logic — no DB, no async, fully unit-testable |
+| `__tests__/` | Integration test stubs |
+| `index.ts` | Wires routes to handlers, exports the router |
+
+Register it in `apps/backend/src/routes/index.ts`:
 
 ```typescript
 import posts from "@/modules/posts";
-export const routes = [posts];
+
+// Authenticated routes:
+export const routes = [users, posts];
+
+// Or public routes:
+export const publicRoutes = [health, posts];
 ```
+
+Then flesh out the repository with real Drizzle queries and add your DB schema to `packages/db/src/schema/`.
 
 ### Add a Frontend Page
 
@@ -188,8 +219,22 @@ packages/
 ## Learn More
 
 - [Architecture Guide](apps/backend/docs/ARCHITECTURE.md) — How the backend is structured
+- [Backend Decisions](apps/backend/docs/DECISIONS.md) — Why each backend choice was made
+- [Frontend Decisions](apps/frontend/docs/DECISIONS.md) — Why each frontend choice was made
+- [Batteries Included](docs/BATTERIES.md) — All built-in utilities with usage examples
 - [Deployment Guide](docs/DEPLOYMENT.md) — Ship to production
+- [Writing Style Guide](docs/WRITING.md) — How we write docs and articles
 - [API Docs](http://localhost:9999/docs) — Auto-generated from your code
+
+---
+
+## This is a Template, Not a Framework
+
+When you create a repo from this template, you own it. There is no upstream to pull from. Delete what you don't need, rename what makes sense to rename, and diverge freely.
+
+What to keep: the `packages/shared` Result type, the `tryInfra` pattern, the module scaffolder, the Biome config.
+
+What to replace: the example `users` module with your own domain, the license, this README.
 
 ---
 
