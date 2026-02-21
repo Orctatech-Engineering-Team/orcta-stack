@@ -8,15 +8,11 @@ pnpm setup && docker compose up -d && pnpm db:migrate && pnpm dev
 
 Backend runs on [localhost:9999](http://localhost:9999/docs). Frontend on [localhost:5173](http://localhost:5173).
 
----
-
 ## What's Inside
 
 **Backend** — Hono, Drizzle, PostgreSQL, better-auth
 **Frontend** — React 19, TanStack Router, Tailwind v4
 **Extras** — File uploads, WebSockets, background jobs, rate limiting
-
----
 
 ## Get Started
 
@@ -57,8 +53,6 @@ pnpm dev
 
 Open [localhost:5173](http://localhost:5173). You're live.
 
----
-
 ## Daily Commands
 
 ```bash
@@ -67,8 +61,6 @@ pnpm test               # Run tests
 pnpm lint               # Check code
 pnpm typecheck          # Check types
 ```
-
----
 
 ## Build Something
 
@@ -127,8 +119,6 @@ pnpm db:generate   # Creates migration
 pnpm db:migrate    # Applies it
 ```
 
----
-
 ## Use the Batteries
 
 ### Upload Files
@@ -182,8 +172,6 @@ app.use("/api/*", rateLimit());
 app.post("/api/auth/login", authRateLimit, loginHandler);
 ```
 
----
-
 ## Deploy
 
 **Backend** → Docker on any VPS, or Railway/Render
@@ -191,8 +179,6 @@ app.post("/api/auth/login", authRateLimit, loginHandler);
 **Database** → Supabase, Neon, or Railway
 
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the full guide.
-
----
 
 ## Project Layout
 
@@ -214,8 +200,6 @@ packages/
   email-templates/ ← Email builders
 ```
 
----
-
 ## Learn More
 
 - [Architecture Guide](apps/backend/docs/ARCHITECTURE.md) — How the backend is structured
@@ -225,8 +209,6 @@ packages/
 - [Deployment Guide](docs/DEPLOYMENT.md) — Ship to production
 - [Writing Style Guide](docs/WRITING.md) — How we write docs and articles
 - [API Docs](http://localhost:9999/docs) — Auto-generated from your code
-
----
 
 ## This is a Template, Not a Framework
 
