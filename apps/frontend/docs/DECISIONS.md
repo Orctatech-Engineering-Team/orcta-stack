@@ -20,9 +20,9 @@ const { id } = useParams<{ id: string }>();  // You hope id exists
 const { id } = Route.useParams();  // TypeScript knows id is string
 ```
 
-2. **File-based routing** — Create a file, get a route. No manual route configuration.
+1. **File-based routing** — Create a file, get a route. No manual route configuration.
 
-```
+```bash
 routes/
   __root.tsx      →  Layout wrapper
   index.tsx       →  /
@@ -31,7 +31,7 @@ routes/
   posts.new.tsx   →  /posts/new
 ```
 
-3. **Built-in data loading** — Load data before rendering. No loading spinners for initial page load.
+1. **Built-in data loading** — Load data before rendering. No loading spinners for initial page load.
 
 ```typescript
 export const Route = createFileRoute("/posts/$id")({
@@ -46,7 +46,7 @@ function PostPage() {
 }
 ```
 
-4. **Search params as state** — Type-safe URL search params. Shareable, bookmarkable state.
+1. **Search params as state** — Type-safe URL search params. Shareable, bookmarkable state.
 
 ```typescript
 const searchSchema = z.object({
@@ -67,7 +67,7 @@ function PostsPage() {
 }
 ```
 
-5. **Devtools** — Visual route tree, navigation history, cache state.
+1. **Devtools** — Visual route tree, navigation history, cache state.
 
 **Trade-offs**:
 
@@ -93,9 +93,9 @@ const { data: user } = useQuery({
 });
 ```
 
-2. **Background updates** — Stale data shows immediately while fresh data loads.
+1. **Background updates** — Stale data shows immediately while fresh data loads.
 
-3. **Mutations with optimistic updates** — Update UI before server confirms.
+2. **Mutations with optimistic updates** — Update UI before server confirms.
 
 ```typescript
 const mutation = useMutation({
@@ -123,9 +123,9 @@ const mutation = useMutation({
 });
 ```
 
-4. **Automatic retries** — Failed requests retry with exponential backoff.
+1. **Automatic retries** — Failed requests retry with exponential backoff.
 
-5. **Devtools** — Inspect cache, trigger refetches, test loading states.
+2. **Devtools** — Inspect cache, trigger refetches, test loading states.
 
 **Configuration**:
 
@@ -175,9 +175,9 @@ const useUIStore = create((set) => ({
 }));
 ```
 
-2. **No Provider needed** — Works outside React tree. Use in utilities, event handlers.
+1. **No Provider needed** — Works outside React tree. Use in utilities, event handlers.
 
-3. **Selective subscriptions** — Components only re-render when their selected state changes.
+2. **Selective subscriptions** — Components only re-render when their selected state changes.
 
 ```typescript
 // Only re-renders when sidebarOpen changes
@@ -187,9 +187,9 @@ const sidebarOpen = useUIStore((s) => s.sidebarOpen);
 const toggleSidebar = useUIStore((s) => s.toggleSidebar);
 ```
 
-4. **TypeScript native** — Types just work.
+1. **TypeScript native** — Types just work.
 
-5. **Tiny** — ~1KB gzipped.
+2. **Tiny** — ~1KB gzipped.
 
 **When to use what**:
 
@@ -238,7 +238,7 @@ const form = useForm({
 });
 ```
 
-5. **Field-level control** — Each field manages its own state and validation.
+1. **Field-level control** — Each field manages its own state and validation.
 
 ```tsx
 <form.Field name="email">
@@ -257,7 +257,7 @@ const form = useForm({
 </form.Field>
 ```
 
-6. **Async validation** — Built-in support for server-side validation.
+1. **Async validation** — Built-in support for server-side validation.
 
 ```typescript
 validators: {
@@ -334,73 +334,92 @@ function Button({ intent, size, className, ...props }) {
 
 ---
 
-## Radix over Headless UI / Reach
+## Base UI over Radix UI
 
-**Choice**: Radix UI primitives
+**Choice**: Base UI (`@base-ui/react`)
 
 **Why**:
 
-1. **Accessibility built-in** — ARIA attributes, keyboard navigation, focus management.
+Radix UI is excellent accessibility primitives. The problem is its portal model. Every component that renders outside the normal DOM flow (Dialog, Tooltip, Popover, Select) fights your CSS stacking context. Dialog overlays render under other positioned elements. Tooltips inherit the wrong background color. The fix is always the same: add a `zIndex` prop, add `--radix-*` variable overrides, wrap the portal target in a `style` attribute. It works. It's four lines of boilerplate per component that exists because Radix's containment model and yours don't agree.
 
-2. **Unstyled** — Primitives are components, not opinions. Style with Tailwind.
+Base UI makes a different bet. It provides the same accessibility primitives — focus management, ARIA attributes, keyboard interactions, `data-disabled` / `data-open` state attributes — and leaves all visual concerns to you. Portal stacking is solved by two lines in `index.css`:
 
-3. **Composable** — Build complex UI from simple parts.
+```css
+#root  { isolation: isolate; }   /* new stacking context — portals respect it */
+body   { position: relative; }   /* iOS Safari backdrop fix */
+```
+
+Components are built by wrapping Base UI's logic in your own styles:
 
 ```tsx
-import * as Dialog from "@radix-ui/react-dialog";
+import { Button as BaseButton } from "@base-ui/react/button";
+import { cva } from "class-variance-authority";
 
-function Modal({ trigger, title, children }) {
+const buttonVariants = cva(
+  "inline-flex items-center rounded-md text-sm font-medium transition-colors",
+  {
+    variants: {
+      variant: {
+        default: "bg-(--color-primary) text-(--color-primary-foreground)",
+        outline: "border border-border bg-(--color-background)",
+      },
+    },
+  },
+);
+
+function Button({ variant, className, ...props }) {
   return (
-    <Dialog.Root>
-      <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg">
-          <Dialog.Title className="text-lg font-bold">{title}</Dialog.Title>
-          {children}
-          <Dialog.Close className="absolute top-4 right-4">×</Dialog.Close>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <BaseButton
+      className={cn(buttonVariants({ variant }), className)}
+      {...props}
+    />
   );
 }
 ```
 
-4. **Animation-ready** — Data attributes for enter/exit states. Works with CSS transitions.
+CVA handles variant composition. Base UI handles accessibility. CSS handles everything visual. None of these know about each other.
 
 **Trade-offs**:
 
-- More setup than pre-styled libraries
-- Need to handle styling yourself
-- Some components are complex
+- Smaller ecosystem than Radix (as of 2026) — Date Picker, Combobox, and a few others are not yet available
+- For the 10–15 components used in 90% of UIs (Button, Dialog, Tooltip, Popover, Select, Menu) Base UI is complete and cleaner to work with
+- If a missing component is blocking, use Radix for that specific component — both can coexist temporarily
 
 ---
 
-## Vite over Next.js / CRA
+## SPA (TanStack Router + Vite) over SSR (TanStack Start / Next.js)
 
-**Choice**: Vite (SPA)
+**Choice**: SPA — single-page application, rendered entirely in the browser.
 
-**Why**:
+**Why for this template**:
 
-1. **Fast** — ESM-based dev server. No bundling during development.
+The primary use case for this stack is authenticated products: dashboards, SaaS application shells, internal tools. These share two properties that make SSR unnecessary:
 
-2. **Simple** — It's a build tool, not a framework. No magic.
+1. **Search engines don’t crawl authenticated content.** SSR’s main payoff is SEO and initial paint on public pages. Behind a login, neither applies.
+2. **A separate API already exists.** The SSR advantage of co-locating server and UI in one deployment is irrelevant when the backend is a separate Hono service.
 
-3. **SPA is enough** — We have a separate API. Don't need SSR complexity.
+SPA is simpler: the output is static files, deployable to any CDN with zero server infrastructure. First-paint latency is solved with good loading skeletons, not rendering pipeline complexity.
 
-4. **Great plugin ecosystem** — TanStack Router plugin, etc.
+**The upgrade path**:
 
-**When to use Next.js instead**:
+If you add public-facing pages that need SEO or fast first paint — a marketing site, a public product page, a blog — the migration is [TanStack Start](https://tanstack.com/start), not Next.js. TanStack Start is built on the same TanStack Router primitives used here. Route files, `beforeLoad` guards, `useLoaderData`, `queryOptions` factories — all carry over. It’s an upgrade, not a rewrite.
 
-- Need SSR for SEO
-- Want API routes in the same project
-- Need ISR/static generation
+**When to choose TanStack Start from the start**:
 
-**Trade-offs**:
+- Your app has meaningful public pages (landing page, pricing, blog)
+- Server-side rendering of the initial authenticated view matters for perceived performance
+- You want server functions co-located with route files
 
-- No SSR (SEO relies on client rendering)
-- Manual code splitting
-- No built-in API routes
+**When to choose Next.js instead**:
+
+- Your team has deep Next.js expertise and the migration cost to TanStack isn’t worth it
+- You need the Next.js ecosystem specifically (Vercel ISR, next/image CDN optimisation, etc.)
+
+**Trade-offs of the SPA choice**:
+
+- Public routes are not indexed by search engines without additional SSG/prerendering setup
+- Initial load requires a JS bundle download before anything renders
+- No server functions — all data fetching goes through the API
 
 ---
 
@@ -408,7 +427,7 @@ function Modal({ trigger, title, children }) {
 
 **Choice**: Feature-based, not type-based
 
-```
+```bash
 src/
   routes/           # Pages (file-based routing)
   components/       # Shared UI components
@@ -426,7 +445,7 @@ src/
 
 **Within features**, colocate related code:
 
-```
+```bash
 routes/
   posts.tsx            # Page component
   posts.api.ts         # API calls for this page
@@ -536,6 +555,7 @@ The root route's `beforeLoad` fetches the session once and injects it into route
 **Why**:
 
 The browser's `fetch` API is a web standard. Libraries like `axios`, `ky`, and `got` add:
+
 - Interceptors (you can do this with a wrapper function)
 - Automatic retries (handle in `queryOptions.retry`)
 - Request cancellation (use `AbortSignal` from the `loader` context)
@@ -563,6 +583,7 @@ The `api` object in `lib/api.ts` is a plain object of functions — not a class 
 A common pattern is to create a `useAuthStore` or `AuthContext` to hold the current user. This creates a redundant source of truth that can drift from the server state.
 
 The query cache *is* the client-side state for server data. The session is server state. It:
+
 - Has a known staleness (5 minutes)
 - Must be re-fetched after mutations (signIn/signOut)
 - Can be invalidated from anywhere via `queryClient.invalidateQueries`

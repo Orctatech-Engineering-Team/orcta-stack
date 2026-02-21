@@ -72,13 +72,13 @@ const users = await prisma.user.findMany({
 });
 ```
 
-2. **No code generation** — Prisma requires `prisma generate` after schema changes. Drizzle schemas are just TypeScript. Change and go.
+1. **No code generation** — Prisma requires `prisma generate` after schema changes. Drizzle schemas are just TypeScript. Change and go.
 
-3. **Lightweight** — No engine binary. Drizzle is ~50KB. Prisma ships a Rust query engine.
+2. **Lightweight** — No engine binary. Drizzle is ~50KB. Prisma ships a Rust query engine.
 
-4. **Better types** — `$inferSelect` and `$inferInsert` give you exact types from your schema. No drift.
+3. **Better types** — `$inferSelect` and `$inferInsert` give you exact types from your schema. No drift.
 
-5. **Migrations as SQL** — Drizzle generates plain SQL migrations. You can read and edit them. Prisma migrations are harder to customize.
+4. **Migrations as SQL** — Drizzle generates plain SQL migrations. You can read and edit them. Prisma migrations are harder to customize.
 
 **Trade-offs**:
 
@@ -113,7 +113,7 @@ async function createUser(data): Promise<
 }
 ```
 
-2. **Exhaustive checking** — TypeScript errors if you forget a case.
+1. **Exhaustive checking** — TypeScript errors if you forget a case.
 
 ```typescript
 switch (result.type) {
@@ -123,11 +123,11 @@ switch (result.type) {
 }
 ```
 
-3. **No try-catch chains** — Exceptions bubble up. You need try-catch everywhere or risk unhandled errors. Unions are handled where they're used.
+1. **No try-catch chains** — Exceptions bubble up. You need try-catch everywhere or risk unhandled errors. Unions are handled where they're used.
 
-4. **Better for async** — Exceptions in async code are easy to lose. Forgotten `await`, missing `.catch()`. Unions are just data.
+2. **Better for async** — Exceptions in async code are easy to lose. Forgotten `await`, missing `.catch()`. Unions are just data.
 
-5. **Testing is simpler** — Return values are easier to assert than thrown errors.
+3. **Testing is simpler** — Return values are easier to assert than thrown errors.
 
 **Trade-offs**:
 
@@ -144,11 +144,13 @@ switch (result.type) {
 **Why**:
 
 The classic port/adapter split (a TypeScript interface + a separate Drizzle implementation) adds indirection without payoff at this scale:
+
 - We never swap the underlying database at runtime
 - The DB can run locally in tests — mocking is not needed
 - One extra file per module accumulates quickly
 
 Instead, repositories are plain async functions in a single `*.repository.ts` file. Each function:
+
 - Returns `Result<T, DomainError | InfrastructureError>` — never throws
 - Wraps all DB calls in `tryInfra` — single catch boundary
 - Is tested directly against a real Postgres instance
@@ -211,11 +213,25 @@ export const auth = betterAuth({
 });
 ```
 
+**Schema generation**:
+
+Better Auth manages its own tables: `user`, `session`, `account`, `verification`. The initial migration in `packages/db/migrations/` already includes these. If you add plugins (2FA, API keys, organisations, passkeys, etc.), each plugin adds its own tables. Regenerate the schema before migrating:
+
+```bash
+npx @better-auth/cli generate   # Introspects auth config, updates packages/db/src/schema/
+pnpm db:generate                # Drizzle diffing → new migration file
+pnpm db:migrate                 # Applies migration to the database
+```
+
+Run this any time you add or remove a Better Auth plugin. The CLI reads your auth config from `apps/backend/src/lib/auth.ts` directly — it doesn't need a running server.
+
+See the [Better Auth database docs](https://www.better-auth.com/docs/concepts/database) for the full table reference and plugin schema additions.
+
 **Trade-offs**:
 
-- Newer library, smaller community
+- Newer library, smaller community than Auth.js/Lucia
 - Some advanced features still in development
-- Documentation could be better
+- Schema is Better Auth-owned — don't add custom columns to auth tables; extend the `user` table via the Drizzle schema separately
 
 ---
 
@@ -237,7 +253,7 @@ type User = z.infer<typeof userSchema>;  // TypeScript type
 // Also used for request validation and OpenAPI spec
 ```
 
-2. **Composable** — Schemas combine, extend, pick, omit.
+1. **Composable** — Schemas combine, extend, pick, omit.
 
 ```typescript
 const createUserSchema = userSchema.extend({ password: z.string().min(8) });
@@ -245,9 +261,9 @@ const updateUserSchema = userSchema.partial();
 const publicUserSchema = userSchema.omit({ email: true });
 ```
 
-3. **Great errors** — Parse errors are detailed and structured.
+1. **Great errors** — Parse errors are detailed and structured.
 
-4. **TypeScript first** — Types are derived, not duplicated.
+2. **TypeScript first** — Types are derived, not duplicated.
 
 **Trade-offs**:
 
@@ -354,6 +370,7 @@ The `usecases.ts` file is **optional** — add it when business rules exist that
 Repositories and use-cases are module-level functions, not classes. Their dependencies (the `db` connection, `env` config) are imported directly at module scope.
 
 This works because:
+
 - The DB is a single Postgres connection pool shared across the process
 - Tests use environment-specific config (`.env.test` → different DB URL in CI if needed)
 - Use-cases are pure functions with no dependencies at all
@@ -439,6 +456,7 @@ When `AXIOM_TOKEN` is not set (local dev, CI), logs go to stdout only. When set,
 ### Why we skip OpenTelemetry (for now)
 
 OTel is a protocol for exporting telemetry to a collector. Adding it means:
+
 - Running an OTel collector (more infra)
 - Configuring exporters to Axiom's OTLP endpoint
 - Writing spans instead of events
@@ -484,9 +502,11 @@ Request in
 | Everything else | 5% random sample |
 
 The feature_flags rule was added beyond the article's example. During a feature rollout, dropping 95% of flagged requests would make it impossible to analyse the new behaviour. Handlers annotate rollout requests with:
+
 ```typescript
 addToEvent(c, { feature_flags: { new_checkout_flow: true } });
 ```
+
 and those events are always retained.
 
 ---
@@ -498,4 +518,3 @@ and those events are always retained.
 **`error.code` and `error.retriable`** — typed on `WideEvent.error` as optional fields. The middleware catches unhandled errors and populates `type` and `message` automatically. Handlers should add `code` and `retriable` for business-logic errors where that context is meaningful (e.g. payment failures with Stripe decline codes).
 
 **Metrics** — no Prometheus, no StatsD, no counters. The same queries you'd run on a metrics dashboard (error rate by endpoint, p99 latency) can be run as APL aggregations on wide events in Axiom. One data store, one query language, no cardinality limit.
-
