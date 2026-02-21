@@ -6,6 +6,7 @@
 	"type": "module",
 	"scripts": {
 		"setup": "./scripts/setup.sh",
+		"new-module": "./scripts/new-module.sh",
 		"dev": "pnpm build:packages && pnpm --parallel --filter \"./apps/*\" dev",
 		"dev:backend": "pnpm build:packages && pnpm --filter backend dev",
 		"dev:frontend": "pnpm build:packages && pnpm --filter frontend dev",
@@ -16,9 +17,9 @@
 		"lint": "pnpm --recursive lint",
 		"test": "pnpm --recursive test",
 		"clean": "rm -rf apps/*/dist packages/*/dist node_modules/.cache",
-		"db:generate": "pnpm --filter backend db:generate",
-		"db:migrate": "pnpm --filter backend db:migrate",
-		"db:studio": "pnpm --filter backend db:studio",
+		"db:generate": "pnpm --filter @repo/db db:generate",
+		"db:migrate": "pnpm --filter @repo/db db:migrate",
+		"db:studio": "pnpm --filter @repo/db db:studio",
 		"new:module": "./scripts/new-module.sh"
 	},
 	"devDependencies": {
