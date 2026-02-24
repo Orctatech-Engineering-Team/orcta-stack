@@ -5,7 +5,9 @@ import type { ZodType } from "zod";
 import type { AppEnv } from "./create-app";
 import { InfrastructureError } from "./error";
 
-// Re-export for convenience
+/**
+ * Shared API response types re-exported for handler convenience.
+ */
 export type {
 	ApiError,
 	ApiResponse,
@@ -14,10 +16,18 @@ export type {
 	Ok,
 	Result,
 } from "@repo/shared";
+
+/**
+ * Functional result helpers re-exported for handler convenience.
+ */
 export { err, isErr, isOk, ok } from "@repo/shared";
 
-// ─── HTTP status codes ───────────────────────────────────────────────────────
-// Re-exported here so handlers only need a single import from "@/lib/types".
+/**
+ * Common HTTP status code constants.
+ *
+ * Re-exported so handlers can import all response utilities
+ * from a single module.
+ */
 export {
 	BAD_REQUEST,
 	CONFLICT,
@@ -33,36 +43,57 @@ export {
 	UNPROCESSABLE_ENTITY,
 } from "./http-status-codes";
 
-// Type-safe route handler
+/**
+ * Strongly typed route handler bound to the application environment.
+ *
+ * Ensures handlers receive the correct Context<AppEnv> typing
+ * when used with @hono/zod-openapi.
+ */
 export type AppRouteHandler<R extends RouteConfig> = RouteHandler<R, AppEnv>;
 
-// ─── Route definition helpers ────────────────────────────────────────────────
-
-// Wraps a schema in the JSON content envelope required by @hono/zod-openapi responses.
-//
-// Before:
-//   200: { content: { "application/json": { schema: userSchema } }, description: "Found" }
-// After:
-//   200: jsonRes(userSchema, "Found")
+/**
+ * Wraps a Zod schema inside the OpenAPI JSON response envelope.
+ *
+ * Reduces repetitive nesting when defining route responses.
+ *
+ * @example
+ * 200: jsonRes(userSchema, "User retrieved")
+ */
 export function jsonRes<S extends ZodType>(schema: S, description: string) {
-	return { content: { "application/json": { schema } }, description } as const;
+	return {
+		content: { "application/json": { schema } },
+		description,
+	} as const;
 }
 
-// Wraps a schema in the JSON content envelope required by @hono/zod-openapi request bodies.
-//
-// Before:
-//   body: { content: { "application/json": { schema: bodySchema } } }
-// After:
-//   body: jsonBody(bodySchema)
+/**
+ * Wraps a Zod schema inside the OpenAPI JSON request body envelope.
+ *
+ * Standardizes request body definitions.
+ *
+ * @example
+ * body: jsonBody(createUserSchema)
+ */
 export function jsonBody<S extends ZodType>(schema: S) {
-	return { content: { "application/json": { schema } } } as const;
+	return {
+		content: { "application/json": { schema } },
+	} as const;
 }
 
-// ─── Response helpers ────────────────────────────────────────────────────────
+/**
+ * Constructs a successful API response.
+ *
+ * @param data - Response payload
+ */
 export function success<T>(data: T): ApiSuccess<T> {
 	return { success: true, data };
 }
 
+/**
+ * Constructs a standardized API error response.
+ *
+ * @param error - Machine-readable error payload
+ */
 export function failure(error: {
 	code: string;
 	message: string;
@@ -71,92 +102,112 @@ export function failure(error: {
 	return { success: false, error };
 }
 
-// Checks if a result error is an infrastructure failure.
-// Use in handlers to separate "our system is broken" from "business rule not met".
-//
-// Example:
-//   const result = await findUserById(id);
-//   if (!result.ok) {
-//     if (isInfraError(result.error)) return c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), 500);
-//     // result.error is now narrowed to your domain error union
-//     switch (result.error.type) {
-//       case "USER_NOT_FOUND": return c.json(failure({ code: "NOT_FOUND", message: "User not found" }), 404);
-//     }
-//   }
+/**
+ * Type guard for detecting infrastructure-level failures.
+ *
+ * Used to distinguish system errors (network, database, external services)
+ * from domain/business rule errors.
+ */
 export const isInfraError = (e: unknown): e is InfrastructureError =>
 	e instanceof InfrastructureError;
 
-// ─── Wide Events ─────────────────────────────────────────────────────────────
-// A wide event is a single, context-rich log emitted once per request per
-// service. The handler / middleware merges fields progressively throughout the
-// request lifecycle using addToEvent(), then the wide-event middleware emits
-// the complete record at the end.
-//
-// Inspired by: https://loggingsucks.com — "Implementing Wide Events" section.
-
+/**
+ * WideEvent
+ *
+ * Represents a single, context-rich log record emitted once per request.
+ *
+ * Fields are progressively merged throughout the request lifecycle by
+ * handlers and middleware. Final emission is handled centrally by the
+ * wide-event middleware.
+ */
 export type WideEvent = {
-	// ── Request context (populated by wideEventMiddleware) ───────────────────
+	/** Unique request identifier */
 	request_id?: string;
-	// trace_id: forwarded from x-trace-id header when set by a gateway or client,
-	// otherwise equals request_id. Enables multi-service correlation without a
-	// full distributed tracing setup.
+
+	/**
+	 * Trace identifier for cross-service correlation.
+	 *
+	 * Forwarded from `x-trace-id` when present, otherwise defaults
+	 * to `request_id`.
+	 */
 	trace_id?: string;
+
+	/** ISO timestamp */
 	timestamp?: string;
+
+	/** HTTP method */
 	method?: string;
+
+	/** Request path */
 	path?: string;
+
+	/** Final HTTP status code */
 	status_code?: number;
+
+	/** Request duration in milliseconds */
 	duration_ms?: number;
+
+	/** Request outcome classification */
 	outcome?: "success" | "error";
 
-	// ── Infrastructure context (populated by wideEventMiddleware) ────────────
+	/** Logical service name */
 	service?: string;
+
+	/** Code/service version */
 	service_version?: string;
-	// deployment_id: the docker image tag / git SHA of the running process.
-	// Distinct from service_version: version tracks the code, deployment_id
-	// tracks the running artifact. Critical for "which deploy caused this?".
+
+	/**
+	 * Deployment identifier.
+	 *
+	 * Typically a Docker image tag or Git SHA. Distinct from
+	 * `service_version`.
+	 */
 	deployment_id?: string;
+
+	/** Execution region */
 	region?: string;
+
+	/** Client IP address */
 	ip?: string;
+
+	/** Client user agent */
 	user_agent?: string;
 
-	// ── Auth context (populated by authMiddleware) ────────────────────────────
-	// session_id: the better-auth session ID — high-cardinality, distinct from
-	// user_id. One user can have many concurrent sessions across devices.
+	/** Session identifier */
 	session_id?: string;
+
+	/** Authenticated user context */
 	user?: {
 		id: string;
 		role: string;
-		// Add subscription, plan, or any user attribute handlers want to query on.
-		// Example: addToEvent(c, { user: { ...existing, subscription: "pro" } })
 		[k: string]: unknown;
 	};
 
-	// ── Error context (set in wideEventMiddleware catch block) ───────────────
+	/** Error metadata */
 	error?: {
 		type?: string;
 		message?: string;
-		// code: machine-readable error code (e.g. "card_declined", "rate_limited")
 		code?: string;
-		// retriable: is this a transient error worth retrying?
 		retriable?: boolean;
 		[k: string]: unknown;
 	};
 
-	// ── Business context (populated by handlers via addToEvent) ───────────────
-	// feature_flags: track which flags were active for this request.
-	// Used in tail sampling to always retain events from experimental rollouts.
-	// Example: addToEvent(c, { feature_flags: { new_checkout_flow: true } })
+	/** Feature flag snapshot */
 	feature_flags?: Record<string, boolean>;
 
-	// Arbitrary handler-defined fields — business domain data.
+	/** Arbitrary handler-defined fields */
 	[key: string]: unknown;
 };
 
-// Merges additional fields into the in-flight wide event.
-// Call this from handlers and middleware to add business context.
-//
-// Example:
-//   addToEvent(c, { order: { id, total_cents }, payment: { method } });
+/**
+ * Merges additional fields into the active wide event.
+ *
+ * Safe no-op if the wide-event middleware has not initialized
+ * an event object for the request.
+ *
+ * @param c - Hono request context
+ * @param fields - Partial event fields to merge
+ */
 export function addToEvent(
 	c: Context<AppEnv>,
 	fields: Partial<WideEvent>,
