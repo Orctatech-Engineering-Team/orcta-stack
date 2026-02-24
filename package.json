@@ -6,7 +6,6 @@
 	"type": "module",
 	"scripts": {
 		"setup": "./scripts/setup.sh",
-		"new-module": "./scripts/new-module.sh",
 		"dev": "pnpm build:packages && pnpm --parallel --filter \"./apps/*\" dev",
 		"dev:backend": "pnpm build:packages && pnpm --filter backend dev",
 		"dev:frontend": "pnpm build:packages && pnpm --filter frontend dev",
