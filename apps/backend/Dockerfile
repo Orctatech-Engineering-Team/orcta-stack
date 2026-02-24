@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Copy workspace files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY .swcrc tsconfig.base.json ./
+COPY tsconfig.base.json ./
 COPY packages ./packages
 COPY apps/backend ./apps/backend
 
