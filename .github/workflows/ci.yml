@@ -60,7 +60,7 @@ jobs:
         run: pnpm typecheck
 
       - name: Run migrations
-        run: pnpm --filter @repo/db db:migrate:ci
+        run: pnpm --filter @repo/db db:push:ci
         env:
           DATABASE_URL: postgres://test:test@localhost:5432/test
 
