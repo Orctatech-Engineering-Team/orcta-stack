@@ -50,7 +50,10 @@ export async function addJob<T extends JobName>(
 
 	const queue = queueMap[name];
 
-	return (queue as Queue<JobData[T]>).add(name, data, {
+	// Queue<any> collapses all generics so .add() accepts (string, data) without ExtractNameType inference errors
+	// biome-ignore lint/suspicious/noExplicitAny: BullMQ ExtractNameType bug (github.com/taskforcesh/bullmq/issues/3369)
+	const q = queue as unknown as Queue<any>;
+	return q.add(name, data, {
 		delay: options?.delay,
 		priority: options?.priority,
 		removeOnComplete: 100,
