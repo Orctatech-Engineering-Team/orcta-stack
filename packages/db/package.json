@@ -27,7 +27,7 @@
 		"clean": "rimraf dist",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit push",
-		"db:migrate:ci": "drizzle-kit migrate",
+		"db:push:ci": "drizzle-kit push --force",
 		"db:studio": "drizzle-kit studio"
 	},
 	"dependencies": {
