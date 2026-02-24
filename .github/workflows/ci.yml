@@ -40,7 +40,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.15.0
 
       - uses: actions/setup-node@v4
         with:
@@ -59,8 +59,13 @@ jobs:
       - name: Type check
         run: pnpm typecheck
 
+      - name: Run migrations
+        run: pnpm --filter @repo/db db:migrate:ci
+        env:
+          DATABASE_URL: postgres://test:test@localhost:5432/test
+
       - name: Test
-        run: pnpm test --run
+        run: pnpm test
         env:
           NODE_ENV: test
           DATABASE_URL: postgres://test:test@localhost:5432/test
