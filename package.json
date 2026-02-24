@@ -16,9 +16,9 @@
 		"lint": "pnpm --recursive lint",
 		"test": "pnpm --recursive test",
 		"clean": "rm -rf apps/*/dist packages/*/dist node_modules/.cache",
-		"db:generate": "pnpm --filter backend db:generate",
-		"db:migrate": "pnpm --filter backend db:migrate",
-		"db:studio": "pnpm --filter backend db:studio",
+		"db:generate": "pnpm --filter @repo/db db:generate",
+		"db:migrate": "pnpm --filter @repo/db db:migrate",
+		"db:studio": "pnpm --filter @repo/db db:studio",
 		"new:module": "./scripts/new-module.sh"
 	},
 	"devDependencies": {
