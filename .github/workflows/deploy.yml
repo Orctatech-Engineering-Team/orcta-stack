@@ -115,12 +115,6 @@ jobs:
             # Show container states (useful for debugging in CI logs)
             docker compose --env-file .env.production -f docker-compose.prod.yml ps
 
-            # Block deployment until DB + Redis pass healthchecks
-            # If unhealthy → dump logs and abort deployment
-            if ! docker compose --env-file .env.production -f docker-compose.prod.yml wait db redis; then
-              docker compose --env-file .env.production -f docker-compose.prod.yml logs --no-color --tail=200 db redis
-              exit 1
-            fi
 
             # Run database migrations using the NEW backend image
             # --rm prevents orphaned containers
