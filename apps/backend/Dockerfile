@@ -17,17 +17,21 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm build:packages
 RUN pnpm --filter backend build
 
+# Produce a flat, symlink-free node_modules for the backend only.
+# This is the canonical pnpm approach for Docker — avoids broken symlinks
+# when the workspace virtual store is copied without its sibling package dirs.
+RUN pnpm --filter backend deploy --prod /app/deploy
+
 # Production stage
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Copy built files
+# Compiled application sources
 COPY --from=builder /app/apps/backend/dist ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages/db/dist ./node_modules/@repo/db/dist
-COPY --from=builder /app/packages/shared/dist ./node_modules/@repo/shared/dist
-COPY --from=builder /app/packages/email-templates/dist ./node_modules/@repo/email-templates/dist
+# Flat node_modules from pnpm deploy (includes all workspace packages resolved)
+COPY --from=builder /app/deploy/node_modules ./node_modules
+# SQL migration files (needed by src/db/migrate.js at runtime)
 COPY --from=builder /app/packages/db/migrations ./migrations
 
 ENV NODE_ENV=production
