@@ -76,6 +76,17 @@ jobs:
             mkdir -p "$APP_DIR"
             cd "$APP_DIR"
 
+            # Clone or pull latest code
+            if [ ! -d ".git" ]; then
+              echo "Cloning repository..."
+              git clone git@github.com:Orctatech-Engineering-Team/$REPO_NAME.git .
+            else
+              echo "Pulling latest changes..."
+              git fetch origin
+              git checkout "$BRANCH"
+              git pull origin "$BRANCH"
+            fi
+
             # Pull the new image
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker pull ghcr.io/orctatech-engineering-team/orcta-backend:latest
