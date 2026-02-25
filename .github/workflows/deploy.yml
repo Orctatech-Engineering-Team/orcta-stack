@@ -93,8 +93,6 @@ jobs:
               exit 1
             fi
 
-            chmod 600 .env.production
-
             # Pull the new image
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker pull ghcr.io/orctatech-engineering-team/orcta-backend:latest
