@@ -28,6 +28,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/db/dist ./node_modules/@repo/db/dist
 COPY --from=builder /app/packages/shared/dist ./node_modules/@repo/shared/dist
 COPY --from=builder /app/packages/email-templates/dist ./node_modules/@repo/email-templates/dist
+COPY --from=builder /app/packages/db/migrations ./migrations
 
 ENV NODE_ENV=production
 ENV PORT=9999

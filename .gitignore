@@ -36,7 +36,3 @@ coverage/
 # Misc
 .cache/
 .tanstack/
-
-# migrations
-migrations/
-**/migrations/
