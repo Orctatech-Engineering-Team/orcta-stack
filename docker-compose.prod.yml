@@ -8,11 +8,12 @@ services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
-    env_file: .env.production
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-orcta}
-      POSTGRES_USER: ${POSTGRES_USER:-orcta}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    env_file:
+      - .env.production
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

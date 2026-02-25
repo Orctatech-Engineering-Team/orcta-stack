@@ -65,18 +65,25 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            # Fail fast:
+            # -e  → exit on error
+            # -u  → error on undefined variables
+            # -o pipefail → fail if any command in a pipeline fails
             set -euo pipefail
 
-            # Configuration
+            # Static deployment configuration
             REPO_NAME="orcta-stack"
             APP_DIR="/srv/apps/$REPO_NAME"
+
+            # Branch that triggered the workflow (master in your case)
             BRANCH="${{ github.ref_name }}"
 
-            # Create app directory if it doesn't exist
+            # Ensure application directory exists (idempotent)
             mkdir -p "$APP_DIR"
             cd "$APP_DIR"
 
-            # Clone or pull latest code
+            # Sync repository state
+            # Clone only once; subsequent deploys pull latest changes
             if [ ! -d ".git" ]; then
               echo "Cloning repository..."
               git clone git@github.com:Orctatech-Engineering-Team/$REPO_NAME.git .
@@ -87,27 +94,41 @@ jobs:
               git pull origin "$BRANCH"
             fi
 
-            # check if .env.production exists
+            # Hard stop if production environment file is missing
+            # Prevents accidental boot with empty credentials/secrets
             if [ ! -f ".env.production" ]; then
-              echo "Error: .env.production file not found. Please create it with the necessary environment variables."
+              echo "Error: .env.production file not found."
               exit 1
             fi
 
-            # Pull the new image
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            # Authenticate with GitHub Container Registry (GHCR)
+            # Token is piped via stdin to avoid shell history leakage
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+            # Pull latest backend image built by CI
             docker pull ghcr.io/orctatech-engineering-team/orcta-backend:latest
 
-            # ---- Ensure dependencies are up first ----
-            IMAGE_TAG=latest docker compose -f docker-compose.prod.yml up -d db redis
+            # Start infrastructure dependencies first
+            # --env-file ensures Compose-time variable interpolation works
+            IMAGE_TAG=latest docker compose --env-file .env.production -f docker-compose.prod.yml up -d db redis
 
-            # Wait for healthchecks (db + redis)
-            docker compose -f docker-compose.prod.yml ps
-            docker compose -f docker-compose.prod.yml wait db redis
+            # Show container states (useful for debugging in CI logs)
+            docker compose --env-file .env.production -f docker-compose.prod.yml ps
 
-            # ---- Run migrations ----
-            IMAGE_TAG=latest docker compose -f docker-compose.prod.yml run --rm backend node src/db/migrate.js
+            # Block deployment until DB + Redis pass healthchecks
+            # If unhealthy → dump logs and abort deployment
+            if ! docker compose --env-file .env.production -f docker-compose.prod.yml wait db redis; then
+              docker compose --env-file .env.production -f docker-compose.prod.yml logs --no-color --tail=200 db redis
+              exit 1
+            fi
 
-            # ---- Update backend ----
-            IMAGE_TAG=latest docker compose -f docker-compose.prod.yml up -d backend
+            # Run database migrations using the NEW backend image
+            # --rm prevents orphaned containers
+            IMAGE_TAG=latest docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend node src/db/migrate.js
 
+            # Update backend container
+            # Only backend is recreated → DB/Redis remain untouched
+            IMAGE_TAG=latest docker compose --env-file .env.production -f docker-compose.prod.yml up -d backend
+
+            # Remove dangling/unused images to control disk usage
             docker image prune -f
