@@ -59,13 +59,22 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /opt/orcta-stack
+            set -e
+
+            # Configuration
+            REPO_NAME="orcta-stack"
+            APP_DIR="/srv/apps/$REPO_NAME"
+            BRANCH="${{ github.ref_name }}"
+
+            # Create app directory if it doesn't exist
+            mkdir -p "$APP_DIR"
+            cd "$APP_DIR"
 
             # Pull the new image
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
