@@ -6,18 +6,16 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: orctatech-engineering-team/orcta-backend
+  BACKEND_IMAGE: orctatech-engineering-team/orcta-backend
+  FRONTEND_IMAGE: orctatech-engineering-team/orcta-frontend
 
 jobs:
-  build-and-push:
-    name: Build & push Docker image
+  build-backend:
+    name: Build & push backend image
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-
-    outputs:
-      image_tag: ${{ steps.meta.outputs.version }}
 
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +31,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}
           tags: |
             type=sha,prefix=,format=short
             type=raw,value=latest
@@ -49,10 +47,45 @@ jobs:
           build-args: |
             SERVICE_VERSION=${{ github.sha }}
 
+  build-frontend:
+    name: Build & push frontend image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}
+          tags: |
+            type=sha,prefix=,format=short
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
   deploy:
     name: Deploy to VPS
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: [build-backend, build-frontend]
     environment: production
 
     steps:
@@ -65,25 +98,15 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            # Fail fast:
-            # -e  → exit on error
-            # -u  → error on undefined variables
-            # -o pipefail → fail if any command in a pipeline fails
             set -euo pipefail
 
-            # Static deployment configuration
             REPO_NAME="orcta-stack"
             APP_DIR="/srv/apps/$REPO_NAME"
-
-            # Branch that triggered the workflow (master in your case)
             BRANCH="${{ github.ref_name }}"
 
-            # Ensure application directory exists (idempotent)
             mkdir -p "$APP_DIR"
             cd "$APP_DIR"
 
-            # Sync repository state
-            # Clone only once; subsequent deploys pull latest changes
             if [ ! -d ".git" ]; then
               echo "Cloning repository..."
               git clone git@github.com:Orctatech-Engineering-Team/$REPO_NAME.git .
@@ -94,35 +117,26 @@ jobs:
               git pull origin "$BRANCH"
             fi
 
-            # Hard stop if production environment file is missing
-            # Prevents accidental boot with empty credentials/secrets
             if [ ! -f ".env.production" ]; then
               echo "Error: .env.production file not found."
               exit 1
             fi
 
-            # Authenticate with GitHub Container Registry (GHCR)
-            # Token is piped via stdin to avoid shell history leakage
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-            # Pull latest backend image built by CI
+            # Pull latest images built by CI
             docker pull ghcr.io/orctatech-engineering-team/orcta-backend:latest
+            docker pull ghcr.io/orctatech-engineering-team/orcta-frontend:latest
 
-            # Start infrastructure dependencies first
-            # --env-file ensures Compose-time variable interpolation works
+            # Start infrastructure dependencies
             IMAGE_TAG=latest docker compose --env-file .env.production -f docker-compose.prod.yml up -d db redis
 
-            # Show container states (useful for debugging in CI logs)
             docker compose --env-file .env.production -f docker-compose.prod.yml ps
 
-
-            # Run database migrations using the NEW backend image
-            # --rm prevents orphaned containers
+            # Run database migrations
             IMAGE_TAG=latest docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend deno run --allow-env --allow-net --allow-read --allow-sys apps/backend/src/db/migrate.ts
 
-            # Update backend container
-            # Only backend is recreated → DB/Redis remain untouched
-            IMAGE_TAG=latest docker compose --env-file .env.production -f docker-compose.prod.yml up -d backend
+            # Recreate backend and frontend
+            IMAGE_TAG=latest docker compose --env-file .env.production -f docker-compose.prod.yml up -d backend frontend
 
-            # Remove dangling/unused images to control disk usage
             docker image prune -f

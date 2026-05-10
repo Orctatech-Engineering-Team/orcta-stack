@@ -1,10 +1,18 @@
 # Production docker-compose — used by the CD pipeline on the VPS.
 # Dev services (MinIO, exposed DB ports) are intentionally excluded.
 #
-# The backend image is built by CI and pushed to GHCR.
+# Images are built by CI and pushed to GHCR.
 # Required: .env.production on the VPS (never committed to git).
 
 services:
+  frontend:
+    image: ghcr.io/orctatech-engineering-team/orcta-frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
   db:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -37,8 +45,8 @@ services:
     image: ghcr.io/orctatech-engineering-team/orcta-backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env.production
-    ports:
-      - "9292:9292"
+    expose:
+      - "9999"
     depends_on:
       db:
         condition: service_healthy

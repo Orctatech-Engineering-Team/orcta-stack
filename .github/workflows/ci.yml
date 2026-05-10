@@ -65,4 +65,4 @@ jobs:
           BETTER_AUTH_SECRET: test-secret-for-ci-at-least-32-chars
           BETTER_AUTH_URL: http://localhost:9999
           SERVER_URL: http://localhost:9999
-          FRONTEND_URL: http://localhost:5173
+          FRONTEND_URL: http://localhost:3000

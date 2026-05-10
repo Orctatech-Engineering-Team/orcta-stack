@@ -39,3 +39,6 @@ coverage/
 # Misc
 .cache/
 .tanstack/
+
+# Generated
+**/routeTree.gen.ts
