@@ -4,12 +4,13 @@ Get your app live in 15 minutes.
 
 ## TL;DR
 
-| Part     | Where                       | Cost                |
-| -------- | --------------------------- | ------------------- |
-| Backend  | Railway, Render, or any VPS | $5-20/mo            |
-| Frontend | Vercel                      | Free                |
-| Database | Supabase, Neon, or Railway  | Free tier available |
-| Redis    | Upstash or Railway          | Free tier available |
+| Part       | Where                       | Cost                |
+| ---------- | --------------------------- | ------------------- |
+| Full stack | Docker Compose on any VPS   | $5-20/mo            |
+| Backend    | Railway, Render, or any VPS | $5-20/mo            |
+| Frontend   | Vercel, or Docker on VPS    | Free                |
+| Database   | Supabase, Neon, or Railway  | Free tier available |
+| Redis      | Upstash or Railway          | Free tier available |
 
 ## 1. Database
 
@@ -50,7 +51,33 @@ FRONTEND_URL=https://<your-vercel-url>
 
 1. Railway auto-deploys on push
 
-### Option B: Any VPS (more control)
+### Option B: Docker Compose (whole stack on one VPS)
+
+The simplest production setup: one subdomain, Caddy reverse proxy with
+path-based routing. Caddy serves the SPA frontend at `/` and proxies `/api/*` to
+the backend.
+
+```bash
+# Install dependencies
+curl -fsSL https://get.docker.com | sh
+
+# Clone
+git clone <your-repo> app && cd app
+
+# Set secrets
+echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)" >> .env
+echo "DATABASE_URL=postgres://..." >> .env
+echo "BETTER_AUTH_URL=https://yourdomain.com" >> .env
+echo "FRONTEND_URL=https://yourdomain.com" >> .env
+
+# Start everything
+docker compose up -d
+```
+
+See `docker-compose.yml` for the full service definition. The frontend runs on
+port 80 (Caddy) and the backend on port 9999 (internal).
+
+### Option C: Any VPS (separate services)
 
 SSH into your server:
 
@@ -58,7 +85,7 @@ SSH into your server:
 # Install dependencies
 curl -fsSL https://get.docker.com | sh
 
-# Clone and build
+# Clone and build backend
 git clone <your-repo> app && cd app
 docker build -t api -f apps/backend/Dockerfile .
 

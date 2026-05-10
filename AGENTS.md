@@ -3,8 +3,9 @@
 Instructions for AI agents working in this codebase. Read this before touching
 anything.
 
-Also read: [`CLAUDE.md`](CLAUDE.md) for commands and architecture,
-[`docs/WRITING.md`](docs/WRITING.md) for documentation voice,
+Also read: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for deployment,
+[`docs/DENO_WORKSPACE_SCOPE.md`](docs/DENO_WORKSPACE_SCOPE.md) for workspace
+architecture, [`docs/WRITING.md`](docs/WRITING.md) for documentation voice,
 [`docs/PHILOSOPHY.md`](docs/PHILOSOPHY.md) for the beliefs behind every
 decision.
 

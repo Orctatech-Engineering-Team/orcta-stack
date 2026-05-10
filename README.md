@@ -7,7 +7,7 @@ A production-ready TypeScript monorepo. Ship fast, sleep well.
 ```
 
 Backend runs on [localhost:9999](http://localhost:9999/docs). Frontend on
-[localhost:5173](http://localhost:5173).
+[localhost:3000](http://localhost:3000).
 
 ## What's Inside
 
@@ -20,7 +20,7 @@ jobs, rate limiting
 This is a GitHub template. Click **Use this template** → **Create a new
 repository** on GitHub, then clone your new repo.
 
-You need Deno 2+ (for the backend) and pnpm (for frontend dependencies).
+You need Deno 2+ and pnpm.
 
 ```bash
 git clone https://github.com/<your-org>/<your-repo> my-app
@@ -58,10 +58,10 @@ Run everything:
 
 ```bash
 deno task dev      # Backend on :9999
-deno task dev:frontend   # Frontend on :5173
+deno task dev:frontend   # Frontend on :3000
 ```
 
-Open [localhost:5173](http://localhost:5173). You're live.
+Open [localhost:3000](http://localhost:3000). You're live.
 
 ## Daily Commands
 
@@ -187,29 +187,30 @@ app.post("/api/auth/login", authRateLimit, loginHandler);
 
 ## Deploy
 
-**Backend** → Docker on any VPS, or Railway/Render **Frontend** → Vercel (zero
-config) **Database** → Supabase, Neon, or Railway
+**Full stack** → `docker compose up -d` (Caddy + backend on one VPS)
+**Frontend only** → Vercel (zero config) **Database** → Supabase, Neon, or
+Railway
 
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the full guide.
 
 ## Project Layout
 
 ```bash
-apps/backend/src/
-  modules/         ← Your features go here
-  lib/             ← Reusable utilities
-  jobs/            ← Background workers
-  middlewares/     ← Auth, etc.
+apps/backend/
+  Dockerfile       ← Standalone backend image (Deno compile → Alpine)
+  src/             ← Modules, lib, jobs, middlewares
 
-apps/frontend/src/
-  routes/          ← Pages (file-based routing)
-  lib/             ← API client, helpers
-  components/      ← UI components
+apps/frontend/
+  Dockerfile       ← Deno builder + Caddy runner image
+  Caddyfile        ← SPA + /api/* reverse proxy
+  src/             ← Routes, lib, components
 
 packages/
   db/              ← Database schemas
   shared/          ← Types shared everywhere
   email-templates/ ← Email builders
+
+docker-compose.yml ← Full stack (Caddy :80 + backend :9999 + Postgres + Redis)
 ```
 
 ## Learn More
