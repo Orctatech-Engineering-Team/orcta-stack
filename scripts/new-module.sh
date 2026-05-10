@@ -43,7 +43,6 @@ PASCAL=$(echo "$MODULE" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(su
 echo -e "\n${BOLD}Scaffolding module: ${MODULE}${RESET} (tags: ${PASCAL})\n"
 
 # ── Directory structure ─────────────────────────────────────────────────────────
-mkdir -p "${MODULE_DIR}/usecases"
 mkdir -p "${MODULE_DIR}/__tests__"
 success "Created directory structure"
 
@@ -117,8 +116,8 @@ export async function findAll(): Promise<
 EOF
 success "${MODULE}.repository.ts"
 
-# ── usecases/${MODULE}.usecases.ts ─────────────────────────────────────────────
-cat > "${MODULE_DIR}/usecases/${MODULE}.usecases.ts" << EOF
+# ── ${MODULE}.usecases.ts ──────────────────────────────────────────────────────
+cat > "${MODULE_DIR}/${MODULE}.usecases.ts" << EOF
 // Use-cases: functional core.
 //
 // Pure functions that receive already-loaded domain values and apply business rules.
@@ -227,4 +226,4 @@ echo -e "${BOLD}Then:${RESET}"
 echo    "  • Add your DB schema and table to packages/db/src/schema/"
 echo    "  • Run deno task db:generate && deno task db:migrate"
 echo    "  • Flesh out ${MODULE}.repository.ts with real Drizzle queries"
-echo    "  • Add use-cases to usecases/${MODULE}.usecases.ts as logic grows"
+echo    "  • Add business logic to ${MODULE}.usecases.ts as needed"

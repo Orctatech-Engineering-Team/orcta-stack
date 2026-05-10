@@ -107,7 +107,7 @@ fi
 
 # ── Build packages ─────────────────────────────────────────────────────────────
 step "Verifying packages..."
-info "Shared packages are imported via Deno's import maps — no build step needed."
+info "Shared packages are resolved via Deno workspace — no build step needed."
 
 # ── Done ────────────────────────────────────────────────────────────────────────
 echo ""
