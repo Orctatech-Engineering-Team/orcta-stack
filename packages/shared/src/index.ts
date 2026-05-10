@@ -1,3 +1,3 @@
-export * from "./result.js";
-export * from "./schemas.js";
-export * from "./types.js";
+export * from "./result.ts";
+export * from "./schemas.ts";
+export * from "./types.ts";

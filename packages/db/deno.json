@@ -1,0 +1,23 @@
+{
+  "name": "@repo/db",
+  "version": "0.1.0",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
+  "imports": {
+    "drizzle-orm": "npm:drizzle-orm",
+    "drizzle-orm/pg-core": "npm:drizzle-orm/pg-core",
+    "drizzle-orm/postgres-js": "npm:drizzle-orm/postgres-js",
+    "drizzle-zod": "npm:drizzle-zod",
+    "postgres": "npm:postgres",
+    "dotenv": "npm:dotenv",
+    "drizzle-kit": "npm:drizzle-kit"
+  },
+  "exclude": ["node_modules"],
+  "lint": {
+    "rules": {
+      "exclude": ["no-slow-types"]
+    }
+  }
+}

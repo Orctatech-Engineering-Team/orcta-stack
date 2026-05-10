@@ -10,12 +10,16 @@ Simple rules, predictable code.
 Request → Route → Handler → [Use-Case →] Repository → Database
 ```
 
-**Route** — Validates input with Zod, defines OpenAPI spec  
-**Handler** — Imperative shell. Calls use-case or repository, maps `Result` to HTTP  
-**Use-Case** — Functional core. Pure business logic. No HTTP, no direct DB calls.  
-**Repository** — Imperative shell. Data access via `tryInfra`. Never throws. Returns `Result<T, E>`.
+**Route** — Validates input with Zod, defines OpenAPI spec\
+**Handler** — Imperative shell. Calls use-case or repository, maps `Result` to
+HTTP\
+**Use-Case** — Functional core. Pure business logic. No HTTP, no direct DB
+calls.\
+**Repository** — Imperative shell. Data access via `tryInfra`. Never throws.
+Returns `Result<T, E>`.
 
-The use-case layer is **optional per route**, not optional per module. Use it when business logic exists. Skip it when a handler is just calling a repository.
+The use-case layer is **optional per route**, not optional per module. Use it
+when business logic exists. Skip it when a handler is just calling a repository.
 
 ---
 
@@ -24,14 +28,17 @@ The use-case layer is **optional per route**, not optional per module. Use it wh
 The architecture enforces this boundary at the type level.
 
 **Imperative shell** (handlers, repositories) — talks to the outside world:
+
 - Receives HTTP requests, persists data, calls external services
 - Produces `Result` values from messy reality
 
 **Functional core** (use-cases) — pure functions over domain values:
+
 - Receives already-loaded data as arguments
 - Applies business rules
 - Returns `Result` — no side effects, no async DB calls
-- Trivially testable: call with plain values, assert on the returned `Result` — no mocks, no DB
+- Trivially testable: call with plain values, assert on the returned `Result` —
+  no mocks, no DB
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -53,10 +60,10 @@ The architecture enforces this boundary at the type level.
 
 **Never throw. Encode all failures in the return type.**
 
-| Category | Type | Produced by | Handled by |
-|---|---|---|---|
-| Domain | Typed discriminated union | Repository functions | Handlers — switch/match exhaustively |
-| Infrastructure | `InfrastructureError` | `tryInfra()` | Handlers — `isInfraError()` guard → 500 |
+| Category       | Type                      | Produced by          | Handled by                              |
+| -------------- | ------------------------- | -------------------- | --------------------------------------- |
+| Domain         | Typed discriminated union | Repository functions | Handlers — switch/match exhaustively    |
+| Infrastructure | `InfrastructureError`     | `tryInfra()`         | Handlers — `isInfraError()` guard → 500 |
 
 ```typescript
 // ❌ Don't — hidden control flow, nothing typed at the call site
@@ -70,8 +77,9 @@ async function getPost(id: string): Promise<Post> {
 async function findPostById(
   id: string,
 ): Promise<Result<Post, PostNotFound | InfrastructureError>> {
-  const result = await tryInfra("find post by id", () =>
-    db.query.posts.findFirst({ where: eq(posts.id, id) }),
+  const result = await tryInfra(
+    "find post by id",
+    () => db.query.posts.findFirst({ where: eq(posts.id, id) }),
   );
   if (!result.ok) return result;
   if (!result.value) return err({ type: "POST_NOT_FOUND", lookup: id });
@@ -94,74 +102,111 @@ export const getPostHandler: AppRouteHandler<GetPostRoute> = async (c) => {
     ok: (post) => c.json(success(post), OK),
     err: (e) =>
       isInfraError(e)
-        ? c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR)
-        : c.json(failure({ code: "NOT_FOUND", message: "Post not found" }), NOT_FOUND),
+        ? c.json(
+          failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }),
+          INTERNAL_SERVER_ERROR,
+        )
+        : c.json(
+          failure({ code: "NOT_FOUND", message: "Post not found" }),
+          NOT_FOUND,
+        ),
   });
 };
 ```
 
 **Add it** when any of these are true:
+
 - Logic spans multiple repository results
 - A rule can be expressed as a pure function over domain values
 - The logic is worth testing in isolation, without touching the DB
 
 ```typescript
 // posts.usecases.ts — pure functions, no imports from @/db
-import type { User, Post } from "@repo/db";
+import type { Post, User } from "@repo/db";
 import type { NotPostAuthor } from "./posts.errors";
-import { ok, err, type Result } from "@repo/shared";
+import { err, ok, type Result } from "@repo/shared";
 
 export function authorizePostUpdate(
   user: User,
   post: Post,
 ): Result<Post, NotPostAuthor> {
-  if (post.authorId !== user.id)
+  if (post.authorId !== user.id) {
     return err({ type: "NOT_POST_AUTHOR", userId: user.id, postId: post.id });
+  }
   return ok(post);
 }
 ```
 
 ```typescript
 // posts/handlers.ts — handler runs the imperative shell, calls use-case for the rule
-export const updatePostHandler: AppRouteHandler<UpdatePostRoute> = async (c) => {
+export const updatePostHandler: AppRouteHandler<UpdatePostRoute> = async (
+  c,
+) => {
   const user = c.get("user");
   const { id } = c.req.valid("param");
   const body = c.req.valid("json");
 
   const found = await findPostById(id);
-  if (!found.ok)
-    return c.json(failure({ code: "NOT_FOUND", message: "Post not found" }), NOT_FOUND);
+  if (!found.ok) {
+    return c.json(
+      failure({ code: "NOT_FOUND", message: "Post not found" }),
+      NOT_FOUND,
+    );
+  }
 
   const authorized = authorizePostUpdate(user, found.value);
-  if (!authorized.ok)
-    return c.json(failure({ code: "FORBIDDEN", message: "Not your post" }), FORBIDDEN);
+  if (!authorized.ok) {
+    return c.json(
+      failure({ code: "FORBIDDEN", message: "Not your post" }),
+      FORBIDDEN,
+    );
+  }
 
   const result = await updatePost(id, body);
   return match(result, {
     ok: (post) => c.json(success(post), OK),
-    err: () => c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR),
+    err: () =>
+      c.json(
+        failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }),
+        INTERNAL_SERVER_ERROR,
+      ),
   });
 };
 ```
 
-Use-cases receive already-loaded data as arguments — they never import from `@/db` or call repository functions. The handler is the orchestrator: it calls the repositories (imperative shell), then passes the results into the use-case (functional core). Because use-cases are pure functions, they require no mocking to test: call them with plain values and assert on the `Result`.
+Use-cases receive already-loaded data as arguments — they never import from
+`@/db` or call repository functions. The handler is the orchestrator: it calls
+the repositories (imperative shell), then passes the results into the use-case
+(functional core). Because use-cases are pure functions, they require no mocking
+to test: call them with plain values and assert on the `Result`.
 
 ---
 
 ## Result Helpers
 
 ```typescript
-import { ok, err, map, andThen, andThenAsync, match, isOk, isErr } from "@repo/shared";
+import {
+  andThen,
+  andThenAsync,
+  err,
+  isErr,
+  isOk,
+  map,
+  match,
+  ok,
+} from "@repo/shared";
 ```
 
-| Helper | Use when |
-|---|---|
-| `map(result, fn)` | Transform the value, pass error through unchanged |
-| `andThen(result, fn)` | Chain a sync Result-returning function |
-| `andThenAsync(result, fn)` | Chain an async Result-returning function |
+| Helper                       | Use when                                                    |
+| ---------------------------- | ----------------------------------------------------------- |
+| `map(result, fn)`            | Transform the value, pass error through unchanged           |
+| `andThen(result, fn)`        | Chain a sync Result-returning function                      |
+| `andThenAsync(result, fn)`   | Chain an async Result-returning function                    |
 | `match(result, { ok, err })` | Handle both branches exhaustively — primary handler pattern |
 
-The `if (!result.ok) return result` pattern is still fine inside repositories when you need to inspect intermediate values. Use helpers when they reduce noise, not to be clever.
+The `if (!result.ok) return result` pattern is still fine inside repositories
+when you need to inspect intermediate values. Use helpers when they reduce
+noise, not to be clever.
 
 ```typescript
 // match in a handler — both branches handled, compiler enforces exhaustiveness
@@ -169,8 +214,14 @@ return match(result, {
   ok: (user) => c.json(success(user), OK),
   err: (e) =>
     isInfraError(e)
-      ? c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR)
-      : c.json(failure({ code: "NOT_FOUND", message: "User not found" }), NOT_FOUND),
+      ? c.json(
+        failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }),
+        INTERNAL_SERVER_ERROR,
+      )
+      : c.json(
+        failure({ code: "NOT_FOUND", message: "User not found" }),
+        NOT_FOUND,
+      ),
 });
 
 // andThenAsync — chain two async repo calls, short-circuits on first error
@@ -215,38 +266,43 @@ modules/posts/
     handlers.test.ts         ← HTTP integration tests (full stack)
 ```
 
-Test files live in `__tests__/` alongside the module they test, not in a top-level `tests/` directory. The vitest config uses `src/**/*.test.ts` to pick them up automatically.
+Test files live in `__tests__/` alongside the module they test, not in a
+top-level `tests/` directory. The Deno test config (in `deno.json`) uses
+`**/*.test.ts` to pick them up automatically.
 
 ---
 
 ## Key Primitives
 
-| Import | From | Purpose |
-|---|---|---|
-| `Result`, `ok`, `err`, `map`, `andThen`, `andThenAsync`, `match`, `isOk`, `isErr` | `@repo/shared` | Result type and combinators |
-| `apiSuccessSchema(dataSchema)` | `@repo/shared` | Canonical `{ success: true, data }` Zod schema for route responses |
-| `apiErrorSchema` | `@repo/shared` | Canonical `{ success: false, error }` Zod schema for route responses |
-| `tryInfra` | `@/lib/infra` | Single catch boundary for all repositories |
-| `InfrastructureError` | `@/lib/error` | Wraps unknown infrastructure throws |
-| `isInfraError` | `@/lib/types` | Type guard for handlers |
-| `success`, `failure` | `@/lib/types` | HTTP response shape helpers |
-| `jsonRes(schema, description)` | `@/lib/types` | Collapse `{ content: { "application/json": { schema } }, description }` in route definitions |
-| `jsonBody(schema)` | `@/lib/types` | Collapse `{ content: { "application/json": { schema } } }` for request bodies |
-| `OK`, `CREATED`, `NOT_FOUND`, `INTERNAL_SERVER_ERROR`, … | `@/lib/types` | Named HTTP status constants — re-exported from `src/lib/http-status-codes.ts` |
-| `AppRouteHandler` | `@/lib/types` | Type-safe handler type |
-| `WideEvent` | `@/lib/types` | Type for the per-request canonical log event |
-| `addToEvent(c, fields)` | `@/lib/types` | Merge business context into the in-flight wide event |
-| `authMiddleware` | `@/middlewares/auth` | Auth middleware (plain function, not factory) |
-| `requireRole` | `@/middlewares/auth` | Role guard (factory — takes role strings) |
-| `wideEventMiddleware` | `@/middlewares/wide-event` | Canonical log line accumulator — emits one wide event per request |
+| Import                                                                            | From                       | Purpose                                                                                      |
+| --------------------------------------------------------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------- |
+| `Result`, `ok`, `err`, `map`, `andThen`, `andThenAsync`, `match`, `isOk`, `isErr` | `@repo/shared`             | Result type and combinators                                                                  |
+| `apiSuccessSchema(dataSchema)`                                                    | `@repo/shared`             | Canonical `{ success: true, data }` Zod schema for route responses                           |
+| `apiErrorSchema`                                                                  | `@repo/shared`             | Canonical `{ success: false, error }` Zod schema for route responses                         |
+| `tryInfra`                                                                        | `@/lib/infra`              | Single catch boundary for all repositories                                                   |
+| `InfrastructureError`                                                             | `@/lib/error`              | Wraps unknown infrastructure throws                                                          |
+| `isInfraError`                                                                    | `@/lib/types`              | Type guard for handlers                                                                      |
+| `success`, `failure`                                                              | `@/lib/types`              | HTTP response shape helpers                                                                  |
+| `jsonRes(schema, description)`                                                    | `@/lib/types`              | Collapse `{ content: { "application/json": { schema } }, description }` in route definitions |
+| `jsonBody(schema)`                                                                | `@/lib/types`              | Collapse `{ content: { "application/json": { schema } } }` for request bodies                |
+| `OK`, `CREATED`, `NOT_FOUND`, `INTERNAL_SERVER_ERROR`, …                          | `@/lib/types`              | Named HTTP status constants — re-exported from `src/lib/http-status-codes.ts`                |
+| `AppRouteHandler`                                                                 | `@/lib/types`              | Type-safe handler type                                                                       |
+| `WideEvent`                                                                       | `@/lib/types`              | Type for the per-request canonical log event                                                 |
+| `addToEvent(c, fields)`                                                           | `@/lib/types`              | Merge business context into the in-flight wide event                                         |
+| `authMiddleware`                                                                  | `@/middlewares/auth`       | Auth middleware (plain function, not factory)                                                |
+| `requireRole`                                                                     | `@/middlewares/auth`       | Role guard (factory — takes role strings)                                                    |
+| `wideEventMiddleware`                                                             | `@/middlewares/wide-event` | Canonical log line accumulator — emits one wide event per request                            |
 
 ---
 
 ## Observability
 
-This codebase uses the **wide event / canonical log line** pattern from [loggingsucks.com](https://loggingsucks.com).
+This codebase uses the **wide event / canonical log line** pattern from
+[loggingsucks.com](https://loggingsucks.com).
 
-Instead of emitting many small log statements throughout a request, a single rich event is built up over the request lifecycle and emitted once at the end with everything needed to answer any debugging question.
+Instead of emitting many small log statements throughout a request, a single
+rich event is built up over the request lifecycle and emitted once at the end
+with everything needed to answer any debugging question.
 
 ```
 Request arrives
@@ -269,7 +325,9 @@ wideEventMiddleware      ← appends: status_code, duration_ms, outcome → logg
 ```typescript
 import { addToEvent } from "@/lib/types";
 
-export const createOrderHandler: AppRouteHandler<CreateOrderRoute> = async (c) => {
+export const createOrderHandler: AppRouteHandler<CreateOrderRoute> = async (
+  c,
+) => {
   const body = c.req.valid("json");
   const result = await createOrder(body);
 
@@ -281,25 +339,31 @@ export const createOrderHandler: AppRouteHandler<CreateOrderRoute> = async (c) =
     return c.json(success(result.value), CREATED);
   }
 
-  return c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR);
+  return c.json(
+    failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }),
+    INTERNAL_SERVER_ERROR,
+  );
 };
 ```
 
-Every authenticated request automatically carries `user.id` and `user.role` — `authMiddleware` adds them without the handler needing to.
+Every authenticated request automatically carries `user.id` and `user.role` —
+`authMiddleware` adds them without the handler needing to.
 
 ### Sampling
 
-The wide event middleware uses **tail-based sampling** — the decision is made after the request completes:
+The wide event middleware uses **tail-based sampling** — the decision is made
+after the request completes:
 
-| Condition | Kept? |
-|---|---|
-| `status_code >= 500` | Always |
-| `outcome === "error"` | Always |
-| `duration_ms > 2000` | Always |
-| `user.role === "admin"` | Always |
-| Everything else | 5% random sample |
+| Condition               | Kept?            |
+| ----------------------- | ---------------- |
+| `status_code >= 500`    | Always           |
+| `outcome === "error"`   | Always           |
+| `duration_ms > 2000`    | Always           |
+| `user.role === "admin"` | Always           |
+| Everything else         | 5% random sample |
 
-This keeps Axiom ingest costs low while guaranteeing 100% capture of the events that matter.
+This keeps Axiom ingest costs low while guaranteeing 100% capture of the events
+that matter.
 
 ### Axiom setup
 
@@ -312,4 +376,6 @@ SERVICE_VERSION=<injected-by-ci-as-git-sha>
 REGION=eu-west-1
 ```
 
-In development these vars are absent and logs go to stdout with `pino-pretty`. In production, pino writes to both stdout (captured by Docker) and Axiom simultaneously.
+In development these vars are absent and logs go to stdout with `pino-pretty`.
+In production, pino writes to both stdout (captured by Docker) and Axiom
+simultaneously.

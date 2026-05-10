@@ -21,9 +21,13 @@ export const posts = pgTable("posts", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   title: text("title").notNull(),
   content: text("content").notNull(),
-  authorId: text("author_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  authorId: text("author_id").notNull().references(() => users.id, {
+    onDelete: "cascade",
+  }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow()
+    .notNull(),
 });
 
 export const insertPostSchema = createInsertSchema(posts);
@@ -47,7 +51,11 @@ export * from "./posts";
 // Expected, business-rule failures — not bugs.
 // Each variant carries exactly the data a handler needs.
 export type PostNotFound = { type: "POST_NOT_FOUND"; lookup: string };
-export type NotPostAuthor = { type: "NOT_POST_AUTHOR"; userId: string; postId: string };
+export type NotPostAuthor = {
+  type: "NOT_POST_AUTHOR";
+  userId: string;
+  postId: string;
+};
 
 export type PostRepoError = PostNotFound | NotPostAuthor;
 ```
@@ -60,18 +68,19 @@ export type PostRepoError = PostNotFound | NotPostAuthor;
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { posts } from "@repo/db/schema";
-import { ok, err } from "@repo/shared";
+import { err, ok } from "@repo/shared";
 import type { Result } from "@repo/shared";
 import { InfrastructureError } from "@/lib/error";
 import { tryInfra } from "@/lib/infra";
-import type { Post, InsertPost } from "@repo/db/schema";
+import type { InsertPost, Post } from "@repo/db/schema";
 import type { PostNotFound } from "./posts.errors";
 
 export async function findPostById(
   id: string,
 ): Promise<Result<Post, PostNotFound | InfrastructureError>> {
-  const result = await tryInfra(`fetch post ${id}`, () =>
-    db.query.posts.findFirst({ where: eq(posts.id, id) }),
+  const result = await tryInfra(
+    `fetch post ${id}`,
+    () => db.query.posts.findFirst({ where: eq(posts.id, id) }),
   );
   if (!result.ok) return result;
   if (!result.value) return err({ type: "POST_NOT_FOUND", lookup: id });
@@ -81,11 +90,14 @@ export async function findPostById(
 export async function createPost(
   data: InsertPost,
 ): Promise<Result<Post, InfrastructureError>> {
-  const result = await tryInfra("create post", () =>
-    db.insert(posts).values(data).returning().then((rows) => rows[0]),
+  const result = await tryInfra(
+    "create post",
+    () => db.insert(posts).values(data).returning().then((rows) => rows[0]),
   );
   if (!result.ok) return result;
-  if (!result.value) return err(new InfrastructureError("Insert returned no rows"));
+  if (!result.value) {
+    return err(new InfrastructureError("Insert returned no rows"));
+  }
   return ok(result.value);
 }
 
@@ -93,8 +105,12 @@ export async function updatePost(
   id: string,
   data: Partial<InsertPost>,
 ): Promise<Result<Post, PostNotFound | InfrastructureError>> {
-  const result = await tryInfra(`update post ${id}`, () =>
-    db.update(posts).set(data).where(eq(posts.id, id)).returning().then((rows) => rows[0]),
+  const result = await tryInfra(
+    `update post ${id}`,
+    () =>
+      db.update(posts).set(data).where(eq(posts.id, id)).returning().then((
+        rows,
+      ) => rows[0]),
   );
   if (!result.ok) return result;
   if (!result.value) return err({ type: "POST_NOT_FOUND", lookup: id });
@@ -104,8 +120,12 @@ export async function updatePost(
 export async function deletePost(
   id: string,
 ): Promise<Result<void, PostNotFound | InfrastructureError>> {
-  const result = await tryInfra(`delete post ${id}`, () =>
-    db.delete(posts).where(eq(posts.id, id)).returning().then((rows) => rows[0]),
+  const result = await tryInfra(
+    `delete post ${id}`,
+    () =>
+      db.delete(posts).where(eq(posts.id, id)).returning().then((rows) =>
+        rows[0]
+      ),
   );
   if (!result.ok) return result;
   if (!result.value) return err({ type: "POST_NOT_FOUND", lookup: id });
@@ -120,15 +140,15 @@ export async function deletePost(
 ```typescript
 import { createRoute, z } from "@hono/zod-openapi";
 import { selectPostSchema } from "@repo/db/schema";
-import { apiSuccessSchema, apiErrorSchema } from "@repo/shared";
+import { apiErrorSchema, apiSuccessSchema } from "@repo/shared";
 import {
-  jsonRes,
-  jsonBody,
-  OK,
   CREATED,
-  UNAUTHORIZED,
-  NOT_FOUND,
   INTERNAL_SERVER_ERROR,
+  jsonBody,
+  jsonRes,
+  NOT_FOUND,
+  OK,
+  UNAUTHORIZED,
 } from "@/lib/types";
 
 const tags = ["Posts"];
@@ -142,7 +162,9 @@ export const createPost = createRoute({
   path: "/posts",
   tags,
   request: {
-    body: jsonBody(z.object({ title: z.string().min(3), content: z.string().min(1) })),
+    body: jsonBody(
+      z.object({ title: z.string().min(3), content: z.string().min(1) }),
+    ),
   },
   responses: {
     [CREATED]: jsonRes(apiSuccessSchema(selectPostSchema), "Created"),
@@ -168,26 +190,31 @@ export type CreatePostRoute = typeof createPost;
 export type GetPostRoute = typeof getPost;
 ```
 
-> **Every status code your handler returns must be declared in `responses`.** `AppRouteHandler` is type-safe against the route definition — returning an undeclared status (including 500) is a compile error. Always declare 500 if the handler calls a repository.
+> **Every status code your handler returns must be declared in `responses`.**
+> `AppRouteHandler` is type-safe against the route definition — returning an
+> undeclared status (including 500) is a compile error. Always declare 500 if
+> the handler calls a repository.
 
 ### 5. Write Use-Cases (when needed)
 
-Add `posts.usecases.ts` only when business logic exists. These are **pure functions** — no DB imports, no async, no HTTP.
+Add `posts.usecases.ts` only when business logic exists. These are **pure
+functions** — no DB imports, no async, no HTTP.
 
 `apps/backend/src/modules/posts/posts.usecases.ts`:
 
 ```typescript
-import type { User, Post } from "@repo/db/schema";
+import type { Post, User } from "@repo/db/schema";
 import type { NotPostAuthor } from "./posts.errors";
-import { ok, err, type Result } from "@repo/shared";
+import { err, ok, type Result } from "@repo/shared";
 
 // Pure rule: can this user modify this post?
 export function authorizePostUpdate(
   user: { id: string },
   post: Post,
 ): Result<Post, NotPostAuthor> {
-  if (post.authorId !== user.id)
+  if (post.authorId !== user.id) {
     return err({ type: "NOT_POST_AUTHOR", userId: user.id, postId: post.id });
+  }
   return ok(post);
 }
 ```
@@ -202,19 +229,33 @@ For simple CRUD with no rules, skip this file entirely.
 
 ```typescript
 import type { AppRouteHandler } from "@/lib/types";
-import { success, failure, isInfraError, OK, CREATED, NOT_FOUND, INTERNAL_SERVER_ERROR } from "@/lib/types";
+import {
+  CREATED,
+  failure,
+  INTERNAL_SERVER_ERROR,
+  isInfraError,
+  NOT_FOUND,
+  OK,
+  success,
+} from "@/lib/types";
 import { match } from "@repo/shared";
 import type { CreatePostRoute, GetPostRoute } from "./routes";
 import { createPost, findPostById } from "./posts.repository";
 
-export const createPostHandler: AppRouteHandler<CreatePostRoute> = async (c) => {
+export const createPostHandler: AppRouteHandler<CreatePostRoute> = async (
+  c,
+) => {
   const userId = c.get("user").id;
   const body = c.req.valid("json");
 
   const result = await createPost({ authorId: userId, ...body });
 
-  if (!result.ok)
-    return c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR);
+  if (!result.ok) {
+    return c.json(
+      failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }),
+      INTERNAL_SERVER_ERROR,
+    );
+  }
 
   return c.json(success(result.value), CREATED);
 };
@@ -227,11 +268,18 @@ export const getPostHandler: AppRouteHandler<GetPostRoute> = async (c) => {
   return match(result, {
     ok: (post) => c.json(success(post), OK),
     err: (e) => {
-      if (isInfraError(e))
-        return c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR);
+      if (isInfraError(e)) {
+        return c.json(
+          failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }),
+          INTERNAL_SERVER_ERROR,
+        );
+      }
       switch (e.type) {
         case "POST_NOT_FOUND":
-          return c.json(failure({ code: "NOT_FOUND", message: "Post not found" }), NOT_FOUND);
+          return c.json(
+            failure({ code: "NOT_FOUND", message: "Post not found" }),
+            NOT_FOUND,
+          );
       }
     },
   });
@@ -282,7 +330,7 @@ app.use("/api/*", authMiddleware);
 
 ```typescript
 export const handler: AppRouteHandler<Route> = async (c) => {
-  const user = c.get("user");      // { id, email, name, role }
+  const user = c.get("user"); // { id, email, name, role }
   const session = c.get("session"); // { id, userId, expiresAt }
 };
 ```
@@ -303,7 +351,8 @@ app.use("/api/admin/*", requireRole("admin"));
 
 ### Ownership Checks
 
-Put ownership rules in a use-case — pure function, no DB. The handler loads the data (imperative shell) and delegates the rule (functional core):
+Put ownership rules in a use-case — pure function, no DB. The handler loads the
+data (imperative shell) and delegates the rule (functional core):
 
 ```typescript
 // posts.usecases.ts
@@ -311,36 +360,57 @@ export function authorizePostUpdate(
   user: { id: string },
   post: Post,
 ): Result<Post, NotPostAuthor> {
-  if (post.authorId !== user.id)
+  if (post.authorId !== user.id) {
     return err({ type: "NOT_POST_AUTHOR", userId: user.id, postId: post.id });
+  }
   return ok(post);
 }
 
 // handlers.ts
-export const updatePostHandler: AppRouteHandler<UpdatePostRoute> = async (c) => {
+export const updatePostHandler: AppRouteHandler<UpdatePostRoute> = async (
+  c,
+) => {
   const user = c.get("user");
   const { id } = c.req.valid("param");
   const body = c.req.valid("json");
 
   const found = await findPostById(id);
-  if (!found.ok)
+  if (!found.ok) {
     return isInfraError(found.error)
-      ? c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR)
-      : c.json(failure({ code: "NOT_FOUND", message: "Post not found" }), NOT_FOUND);
+      ? c.json(
+        failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }),
+        INTERNAL_SERVER_ERROR,
+      )
+      : c.json(
+        failure({ code: "NOT_FOUND", message: "Post not found" }),
+        NOT_FOUND,
+      );
+  }
 
   const authorized = authorizePostUpdate(user, found.value);
-  if (!authorized.ok)
-    return c.json(failure({ code: "FORBIDDEN", message: "Not your post" }), FORBIDDEN);
+  if (!authorized.ok) {
+    return c.json(
+      failure({ code: "FORBIDDEN", message: "Not your post" }),
+      FORBIDDEN,
+    );
+  }
 
   const result = await updatePost(id, body);
   return match(result, {
     ok: (post) => c.json(success(post), OK),
     err: (e) => {
-      if (isInfraError(e))
-        return c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR);
+      if (isInfraError(e)) {
+        return c.json(
+          failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }),
+          INTERNAL_SERVER_ERROR,
+        );
+      }
       switch (e.type) {
         case "POST_NOT_FOUND":
-          return c.json(failure({ code: "NOT_FOUND", message: "Post not found" }), NOT_FOUND);
+          return c.json(
+            failure({ code: "NOT_FOUND", message: "Post not found" }),
+            NOT_FOUND,
+          );
       }
     },
   });
@@ -352,31 +422,43 @@ export const updatePostHandler: AppRouteHandler<UpdatePostRoute> = async (c) => 
 ## Result Helpers
 
 ```typescript
-import { ok, err, map, andThen, andThenAsync, match } from "@repo/shared";
+import { andThen, andThenAsync, err, map, match, ok } from "@repo/shared";
 ```
 
 ### `match` — handle both branches in a handler
 
-`match` handles the ok/err split. When the error union has multiple variants, use `switch` inside the `err` branch — TypeScript will tell you if you miss one:
+`match` handles the ok/err split. When the error union has multiple variants,
+use `switch` inside the `err` branch — TypeScript will tell you if you miss one:
 
 ```typescript
 const result = await findPostById(id);
 return match(result, {
   ok: (post) => c.json(success(post), OK),
   err: (e) => {
-    if (isInfraError(e))
-      return c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR);
+    if (isInfraError(e)) {
+      return c.json(
+        failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }),
+        INTERNAL_SERVER_ERROR,
+      );
+    }
     switch (e.type) {
       case "POST_NOT_FOUND":
-        return c.json(failure({ code: "NOT_FOUND", message: "Post not found" }), NOT_FOUND);
+        return c.json(
+          failure({ code: "NOT_FOUND", message: "Post not found" }),
+          NOT_FOUND,
+        );
       case "NOT_POST_AUTHOR":
-        return c.json(failure({ code: "FORBIDDEN", message: "Not your post" }), FORBIDDEN);
+        return c.json(
+          failure({ code: "FORBIDDEN", message: "Not your post" }),
+          FORBIDDEN,
+        );
     }
   },
 });
 ```
 
-The ternary shorthand is only appropriate when there is exactly one domain error variant.
+The ternary shorthand is only appropriate when there is exactly one domain error
+variant.
 
 ### `andThenAsync` — chain two async repository calls
 
@@ -421,9 +503,10 @@ export async function listPosts(options: {
         offset: options.offset,
         orderBy: (p, { desc }) => desc(p.createdAt),
       }),
-      db.select({ count: sql<number>`count(*)` }).from(posts).then((r) => Number(r[0].count)),
-    ]),
-  );
+      db.select({ count: sql<number>`count(*)` }).from(posts).then((r) =>
+        Number(r[0].count)
+      ),
+    ]));
   if (!result.ok) return result;
   const [data, total] = result.value;
   return ok({ data, total });
@@ -438,8 +521,12 @@ export const listPostsHandler: AppRouteHandler<ListPostsRoute> = async (c) => {
   const offset = (page - 1) * limit;
 
   const result = await listPosts({ limit, offset });
-  if (!result.ok)
-    return c.json(failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }), INTERNAL_SERVER_ERROR);
+  if (!result.ok) {
+    return c.json(
+      failure({ code: "INTERNAL_ERROR", message: "Service unavailable" }),
+      INTERNAL_SERVER_ERROR,
+    );
+  }
 
   const { data, total } = result.value;
   return c.json({
@@ -458,16 +545,25 @@ Three tiers. No mocks unless there is genuinely no alternative.
 
 ### 1. Unit Testing Use-Cases
 
-Use-cases are pure functions — no DB, no HTTP, no mocks needed. Just call them with plain values.
+Use-cases are pure functions — no DB, no HTTP, no mocks needed. Just call them
+with plain values.
 
 File: `modules/posts/__tests__/posts.usecases.test.ts`
 
 ```typescript
-import { describe, it, expect } from "vitest";
+import { describe, it } from "@std/testing/bdd";
+import { expect } from "@std/expect";
 import { authorizePostUpdate } from "../posts.usecases";
 
 describe("authorizePostUpdate", () => {
-  const post = { id: "p1", authorId: "u1", title: "hi", content: "...", createdAt: new Date(), updatedAt: new Date() };
+  const post = {
+    id: "p1",
+    authorId: "u1",
+    title: "hi",
+    content: "...",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
 
   it("returns ok when user owns the post", () => {
     const result = authorizePostUpdate({ id: "u1" }, post);
@@ -476,7 +572,10 @@ describe("authorizePostUpdate", () => {
 
   it("returns NOT_POST_AUTHOR when user does not own the post", () => {
     const result = authorizePostUpdate({ id: "u2" }, post);
-    expect(result).toEqual({ ok: false, error: { type: "NOT_POST_AUTHOR", userId: "u2", postId: "p1" } });
+    expect(result).toEqual({
+      ok: false,
+      error: { type: "NOT_POST_AUTHOR", userId: "u2", postId: "p1" },
+    });
   });
 });
 ```
@@ -485,12 +584,14 @@ Every business rule lives in a use-case. Every use-case is testable this way.
 
 ### 2. Integration Testing Repositories
 
-Repositories talk directly to the DB — test them against a real test database, not mocks. Run a local Postgres instance (or Docker) configured via `.env.test`.
+Repositories talk directly to the DB — test them against a real test database,
+not mocks. Run a local Postgres instance (or Docker) configured via `.env.test`.
 
 File: `modules/posts/__tests__/posts.repository.test.ts`
 
 ```typescript
-import { describe, it, expect, afterEach } from "vitest";
+import { afterEach, describe, it } from "@std/testing/bdd";
+import { expect } from "@std/expect";
 import { createPost, findPostById } from "../posts.repository";
 import { db } from "@/db";
 import { schema } from "@/db";
@@ -504,11 +605,18 @@ afterEach(async () => {
 describe("findPostById", () => {
   it("returns POST_NOT_FOUND when no row exists", async () => {
     const result = await findPostById("nonexistent");
-    expect(result).toEqual({ ok: false, error: { type: "POST_NOT_FOUND", lookup: "nonexistent" } });
+    expect(result).toEqual({
+      ok: false,
+      error: { type: "POST_NOT_FOUND", lookup: "nonexistent" },
+    });
   });
 
   it("returns the post when it exists", async () => {
-    const created = await createPost({ authorId: "u1", title: "hello", content: "world" });
+    const created = await createPost({
+      authorId: "u1",
+      title: "hello",
+      content: "world",
+    });
     expect(created.ok).toBe(true);
     if (!created.ok) return;
 
@@ -518,16 +626,19 @@ describe("findPostById", () => {
 });
 ```
 
-This tests the actual SQL queries, actual constraint errors, and actual `tryInfra` boundary behaviour.
+This tests the actual SQL queries, actual constraint errors, and actual
+`tryInfra` boundary behaviour.
 
 ### 3. Integration Testing Handlers
 
-Test full HTTP flows against a real DB using `app.request()`. Auth is handled by signing up through the app — no mocks, no fake sessions.
+Test full HTTP flows against a real DB using `app.request()`. Auth is handled by
+signing up through the app — no mocks, no fake sessions.
 
 File: `modules/posts/__tests__/handlers.test.ts`
 
 ```typescript
-import { describe, it, expect, afterEach } from "vitest";
+import { afterEach, describe, it } from "@std/testing/bdd";
+import { expect } from "@std/expect";
 import app from "@/app";
 import { db } from "@/db";
 import { schema } from "@/db";
@@ -544,7 +655,7 @@ async function signUp(email = "test@example.com", password = "password-123") {
 
 afterEach(async () => {
   await db.delete(schema.verifications); // no FK cascade
-  await db.delete(schema.users);         // cascades sessions + accounts
+  await db.delete(schema.users); // cascades sessions + accounts
 });
 
 describe("GET /api/posts/:id", () => {
@@ -581,6 +692,7 @@ describe("GET /api/posts/:id", () => {
 ### When Mocks Are Acceptable
 
 Only when the real thing cannot run in a test environment:
+
 - External email/SMS providers (mock the transport, not the business logic)
 - Third-party payment APIs (Stripe, etc.)
 - External webhooks or OAuth flows
@@ -591,8 +703,9 @@ Do **not** mock the DB, Redis, or any infrastructure you can run locally.
 
 ## Observability — Enriching Wide Events
 
-Every request emits **one** structured JSON event (a "wide event" / canonical log line).
-`wideEventMiddleware` populates the base fields automatically; handlers add domain context.
+Every request emits **one** structured JSON event (a "wide event" / canonical
+log line). `wideEventMiddleware` populates the base fields automatically;
+handlers add domain context.
 
 ### Adding fields from a handler
 
@@ -641,16 +754,16 @@ The wide event emitted at the end of the request includes every field added via
 
 ### Sampling rules (applied before emit)
 
-| Condition | Sampled? |
-|---|---|
-| `status_code >= 500` | Always |
-| `outcome === "error"` | Always |
-| `duration_ms > 2000` | Always (slow requests) |
-| User role `admin` | Always |
-| Everything else | 5% random |
+| Condition             | Sampled?               |
+| --------------------- | ---------------------- |
+| `status_code >= 500`  | Always                 |
+| `outcome === "error"` | Always                 |
+| `duration_ms > 2000`  | Always (slow requests) |
+| User role `admin`     | Always                 |
+| Everything else       | 5% random              |
 
-Events that are dropped are never written to Axiom, so you stay within the free tier
-for normal traffic while retaining 100% of interesting signals.
+Events that are dropped are never written to Axiom, so you stay within the free
+tier for normal traffic while retaining 100% of interesting signals.
 
 ### Axiom setup
 
@@ -663,4 +776,5 @@ for normal traffic while retaining 100% of interesting signals.
    SERVICE_VERSION=$(git rev-parse --short HEAD)
    REGION=eu-central-1
    ```
-4. No extra infrastructure — `@axiomhq/pino` streams directly from the process over HTTPS.
+4. No extra infrastructure — `@axiomhq/pino` streams directly from the process
+   over HTTPS.

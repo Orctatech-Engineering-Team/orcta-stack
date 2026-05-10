@@ -6,6 +6,6 @@ export const publicRoutes = [health];
 
 // Protected routes (auth required — authMiddleware applied in app.ts)
 export const routes = [
-	users,
-	// posts,
+  users,
+  // posts,
 ];

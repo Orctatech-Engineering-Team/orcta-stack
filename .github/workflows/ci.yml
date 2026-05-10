@@ -38,34 +38,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: denoland/setup-deno@v2
         with:
-          version: 9.15.0
+          deno-version: v2.x
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build packages
-        run: pnpm build:packages
+      - name: Cache dependencies
+        run: deno cache apps/backend/src/index.ts apps/backend/src/jobs/worker.ts
 
       - name: Lint
-        run: pnpm lint
+        run: deno lint
 
       - name: Type check
-        run: pnpm typecheck
+        run: deno check apps/backend/src/index.ts
 
       - name: Run migrations
-        run: pnpm --filter @repo/db db:push:ci
+        run: deno run --allow-env --allow-net --allow-read --allow-sys apps/backend/src/db/migrate.ts
         env:
           DATABASE_URL: postgres://test:test@localhost:5432/test
 
       - name: Test
-        run: pnpm test
+        run: deno test -A
         env:
           NODE_ENV: test
           DATABASE_URL: postgres://test:test@localhost:5432/test

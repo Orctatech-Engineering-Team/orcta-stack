@@ -6,6 +6,9 @@ dist/
 .tsbuildinfo
 tsconfig.tsbuildinfo
 
+# pnpm (migrated to Deno)
+pnpm-lock.yaml
+
 # Environment files
 .env
 .env.local

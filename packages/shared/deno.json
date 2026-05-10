@@ -1,0 +1,14 @@
+{
+  "name": "@repo/shared",
+  "version": "0.1.0",
+  "exports": "./src/index.ts",
+  "imports": {
+    "zod": "npm:zod"
+  },
+  "exclude": ["node_modules"],
+  "lint": {
+    "rules": {
+      "exclude": ["no-slow-types"]
+    }
+  }
+}

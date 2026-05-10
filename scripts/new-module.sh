@@ -190,7 +190,7 @@ success "index.ts"
 
 # ── __tests__/handlers.test.ts ─────────────────────────────────────────────────
 cat > "${MODULE_DIR}/__tests__/handlers.test.ts" << EOF
-import { describe, it } from "vitest";
+import { describe, it } from "@std/testing/bdd";
 
 // Integration tests for the ${MODULE} handlers.
 // Import the router directly and use Hono's testClient to invoke routes
@@ -202,9 +202,9 @@ describe("${MODULE} handlers", () => {
 EOF
 success "__tests__/handlers.test.ts"
 
-# ── Auto-format with Biome ─────────────────────────────────────────────────────
-if command -v pnpm >/dev/null 2>&1 && [[ -f "biome.json" ]]; then
-  pnpm exec biome check --write "${MODULE_DIR}" >/dev/null 2>&1 && success "Biome formatting applied" || warn "Biome check had warnings (non-fatal)"
+# ── Auto-format with Deno ─────────────────────────────────────────────────────
+if command -v deno >/dev/null 2>&1; then
+  deno fmt "${MODULE_DIR}" >/dev/null 2>&1 && success "Deno formatting applied" || warn "Deno fmt had warnings (non-fatal)"
 fi
 
 # ── Next steps ─────────────────────────────────────────────────────────────────
@@ -225,6 +225,6 @@ echo    "  export const publicRoutes = [health, ${MODULE}];"
 echo ""
 echo -e "${BOLD}Then:${RESET}"
 echo    "  • Add your DB schema and table to packages/db/src/schema/"
-echo    "  • Run pnpm db:generate && pnpm db:migrate"
+echo    "  • Run deno task db:generate && deno task db:migrate"
 echo    "  • Flesh out ${MODULE}.repository.ts with real Drizzle queries"
 echo    "  • Add use-cases to usecases/${MODULE}.usecases.ts as logic grows"

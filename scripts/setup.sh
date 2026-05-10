@@ -18,19 +18,19 @@ step()    { echo -e "\n${BOLD}$*${RESET}"; }
 # ── Prerequisites ───────────────────────────────────────────────────────────────
 step "Checking prerequisites..."
 
-# Node.js — require ≥20
-if ! command -v node >/dev/null 2>&1; then
-  error "Node.js not found. Install v20+ from https://nodejs.org"
+# Deno — require ≥2
+if ! command -v deno >/dev/null 2>&1; then
+  error "Deno not found. Install v2+ from https://deno.com"
   exit 1
 fi
-NODE_MAJOR=$(node -e "process.stdout.write(String(process.versions.node.split('.')[0]))")
-if [[ "$NODE_MAJOR" -lt 20 ]]; then
-  error "Node.js v${NODE_MAJOR} found — v20 or higher required."
+DENO_MAJOR=$(deno --version | head -1 | grep -oP '\d+' | head -1)
+if [[ "$DENO_MAJOR" -lt 2 ]]; then
+  error "Deno v${DENO_MAJOR} found — v2 or higher required."
   exit 1
 fi
-success "Node.js $(node --version)"
+success "Deno $(deno --version | head -1)"
 
-# pnpm
+# pnpm (still needed for frontend deps)
 if ! command -v pnpm >/dev/null 2>&1; then
   error "pnpm not found. Install: npm i -g pnpm"
   exit 1
@@ -106,9 +106,8 @@ else
 fi
 
 # ── Build packages ─────────────────────────────────────────────────────────────
-step "Building shared packages..."
-pnpm build:packages
-success "Packages built"
+step "Verifying packages..."
+info "Shared packages are imported via Deno's import maps — no build step needed."
 
 # ── Done ────────────────────────────────────────────────────────────────────────
 echo ""
@@ -116,10 +115,12 @@ echo -e "${GREEN}${BOLD}Setup complete!${RESET}"
 echo ""
 echo "Next steps:"
 echo "  1. Edit .env — set DATABASE_URL (and REDIS_URL if needed)"
-echo "  2. Run migrations:  pnpm db:migrate"
-echo "  3. Start dev:       pnpm dev"
+echo "  2. Run migrations:  deno task db:migrate"
+echo "  3. Start backend:   deno task dev"
+echo "  4. Start frontend:  deno task dev:frontend  (in a separate terminal)"
 echo ""
 echo "Other useful commands:"
-echo "  pnpm build          Build all apps"
-echo "  pnpm test           Run all tests"
-echo "  pnpm db:studio      Open Drizzle Studio"
+echo "  deno task dev:frontend    Start frontend (Vite)"
+echo "  deno test -A              Run all tests"
+echo "  deno lint                 Lint backend"
+echo "  deno task db:studio       Open Drizzle Studio"

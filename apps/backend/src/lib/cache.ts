@@ -23,28 +23,28 @@ import { redis } from "@/lib/redis";
  *   );
  */
 export async function withCache<T>(
-	key: string,
-	ttlSeconds: number,
-	fn: () => Promise<T>,
+  key: string,
+  ttlSeconds: number,
+  fn: () => Promise<T>,
 ): Promise<T> {
-	if (!redis) return fn();
+  if (!redis) return fn();
 
-	try {
-		const cached = await redis.get(key);
-		if (cached !== null) return JSON.parse(cached) as T;
-	} catch {
-		// Redis unavailable — fall through to source of truth
-	}
+  try {
+    const cached = await redis.get(key);
+    if (cached !== null) return JSON.parse(cached) as T;
+  } catch {
+    // Redis unavailable — fall through to source of truth
+  }
 
-	const value = await fn();
+  const value = await fn();
 
-	try {
-		await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
-	} catch {
-		// Best-effort write — never fail the request because the cache is down
-	}
+  try {
+    await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
+  } catch {
+    // Best-effort write — never fail the request because the cache is down
+  }
 
-	return value;
+  return value;
 }
 
 /**
@@ -56,8 +56,8 @@ export async function withCache<T>(
  *   await invalidateCache(cacheKey("post", postId), cacheKey("posts", "list"));
  */
 export async function invalidateCache(...keys: string[]): Promise<void> {
-	if (!redis || keys.length === 0) return;
-	await redis.del(...keys);
+  if (!redis || keys.length === 0) return;
+  await redis.del(...keys);
 }
 
 /**
@@ -69,5 +69,5 @@ export async function invalidateCache(...keys: string[]): Promise<void> {
  *   cacheKey("posts", page, limit)    // "posts:1:20"
  */
 export function cacheKey(...parts: (string | number)[]): string {
-	return parts.join(":");
+  return parts.join(":");
 }

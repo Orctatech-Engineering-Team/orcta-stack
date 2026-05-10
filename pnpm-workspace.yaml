@@ -1,8 +1,2 @@
 packages:
-  - apps/*
-  - packages/*
-
-onlyBuiltDependencies:
-  - '@swc/core'
-  - esbuild
-  - better-sqlite3
+  - "packages/*"

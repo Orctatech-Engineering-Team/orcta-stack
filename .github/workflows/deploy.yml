@@ -118,7 +118,7 @@ jobs:
 
             # Run database migrations using the NEW backend image
             # --rm prevents orphaned containers
-            IMAGE_TAG=latest docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend node src/db/migrate.js
+            IMAGE_TAG=latest docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend deno run --allow-env --allow-net --allow-read --allow-sys apps/backend/src/db/migrate.ts
 
             # Update backend container
             # Only backend is recreated → DB/Redis remain untouched

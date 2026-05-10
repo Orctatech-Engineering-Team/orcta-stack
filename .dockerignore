@@ -2,11 +2,18 @@
 node_modules/
 **/node_modules/
 
-# Build
+# Test files (not needed at runtime)
+**/__tests__/
+**/*.test.ts
+
+# Frontend (not needed for backend builds)
+apps/frontend/
+
+# Build artifacts
 dist/
 **/dist/
 
-# Git
+# Version control
 .git/
 .gitignore
 
@@ -14,8 +21,12 @@ dist/
 .vscode/
 .idea/
 
-# Misc
-*.md
+# Environment files
 .env
 .env.*
 !.env.example
+
+# Documentation & scripts
+*.md
+docs/
+scripts/

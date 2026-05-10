@@ -5,7 +5,7 @@
 // Testable by calling with plain values — no mocks, no DB setup.
 import type { User } from "@repo/db/schema";
 import { err, ok, type Result } from "@repo/shared";
-import type { EmailUnchanged } from "./users.errors";
+import type { EmailUnchanged } from "./users.errors.ts";
 
 // Prepare an email change for a user.
 //
@@ -16,11 +16,12 @@ import type { EmailUnchanged } from "./users.errors";
 // The handler is responsible for checking whether the new email is available
 // (findUserByEmail) before applying this result to updateUser.
 export function prepareEmailChange(
-	user: User,
-	newEmail: string,
+  user: User,
+  newEmail: string,
 ): Result<{ email: string; emailVerified: false }, EmailUnchanged> {
-	if (user.email === newEmail)
-		return err({ type: "EMAIL_UNCHANGED", email: newEmail });
+  if (user.email === newEmail) {
+    return err({ type: "EMAIL_UNCHANGED", email: newEmail });
+  }
 
-	return ok({ email: newEmail, emailVerified: false as const });
+  return ok({ email: newEmail, emailVerified: false as const });
 }

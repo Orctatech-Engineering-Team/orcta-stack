@@ -3,52 +3,62 @@
 A production-ready TypeScript monorepo. Ship fast, sleep well.
 
 ```bash
-pnpm setup && docker compose up -d && pnpm db:migrate && pnpm dev
+./scripts/setup.sh && docker compose up -d && deno task db:migrate && deno task dev
 ```
 
-Backend runs on [localhost:9999](http://localhost:9999/docs). Frontend on [localhost:5173](http://localhost:5173).
+Backend runs on [localhost:9999](http://localhost:9999/docs). Frontend on
+[localhost:5173](http://localhost:5173).
 
 ## What's Inside
 
-**Backend** — Hono, Drizzle, PostgreSQL, better-auth
-**Frontend** — React 19, TanStack Router, Tailwind v4
-**Extras** — File uploads, WebSockets, background jobs, rate limiting
+**Backend** — Hono, Drizzle, PostgreSQL, better-auth **Frontend** — React 19,
+TanStack Router, Tailwind v4 **Extras** — File uploads, WebSockets, background
+jobs, rate limiting
 
 ## Get Started
 
-This is a GitHub template. Click **Use this template** → **Create a new repository** on GitHub, then clone your new repo.
+This is a GitHub template. Click **Use this template** → **Create a new
+repository** on GitHub, then clone your new repo.
 
-You need Node 20+ and pnpm.
+You need Deno 2+ (for the backend) and pnpm (for frontend dependencies).
 
 ```bash
 git clone https://github.com/<your-org>/<your-repo> my-app
 cd my-app
-pnpm setup
+deno --version      # Verify Deno 2+
+pnpm install        # Install frontend deps
+./scripts/setup.sh  # Generate .env with auth secret
 ```
 
-`pnpm setup` installs dependencies and writes a `.env` file with a generated auth secret.
+`./scripts/setup.sh` writes a `.env` file with a generated auth secret.
 
 Start the database:
 
 ```bash
-docker compose up -d    # Starts PostgreSQL + Redis
-pnpm db:migrate         # Creates the initial tables
+docker compose up -d         # Starts PostgreSQL + Redis
+deno task db:migrate         # Creates the initial tables
 ```
 
-> **Note on auth tables:** Better Auth manages its own tables (users, sessions, accounts). The initial migration already includes them. If you add Better Auth plugins later (2FA, API keys, organisations, etc.), regenerate the schema first:
+> **Note on auth tables:** Better Auth manages its own tables (users, sessions,
+> accounts). The initial migration already includes them. If you add Better Auth
+> plugins later (2FA, API keys, organisations, etc.), regenerate the schema
+> first:
 >
 > ```bash
-> npx @better-auth/cli generate   # Updates packages/db/src/schema/ from your auth config
-> pnpm db:generate                # Creates the migration
-> pnpm db:migrate                 # Applies it
+> deno run -A npm:@better-auth/cli generate   # Updates packages/db/src/schema/ from your auth config
+> deno task db:generate                        # Creates the migration
+> deno task db:migrate                         # Applies it
 > ```
 >
-> See the [Better Auth database docs](https://www.better-auth.com/docs/concepts/database) for the full reference.
+> See the
+> [Better Auth database docs](https://www.better-auth.com/docs/concepts/database)
+> for the full reference.
 
 Run everything:
 
 ```bash
-pnpm dev
+deno task dev      # Backend on :9999
+deno task dev:frontend   # Frontend on :5173
 ```
 
 Open [localhost:5173](http://localhost:5173). You're live.
@@ -56,10 +66,11 @@ Open [localhost:5173](http://localhost:5173). You're live.
 ## Daily Commands
 
 ```bash
-pnpm dev                # Run everything
-pnpm test               # Run tests
-pnpm lint               # Check code
-pnpm typecheck          # Check types
+deno task dev           # Run backend
+deno task dev:frontend  # Run frontend
+deno test -A            # Run tests
+deno lint               # Check code
+deno check              # Check types
 ```
 
 ## Build Something
@@ -67,20 +78,20 @@ pnpm typecheck          # Check types
 ### Add a Backend Module
 
 ```bash
-pnpm new:module posts
+./scripts/new-module.sh posts
 ```
 
 This scaffolds a complete module at `apps/backend/src/modules/posts/`:
 
-| File | Purpose |
-|------|---------|
-| `routes.ts` | OpenAPI route definitions with Zod schemas |
-| `handlers.ts` | HTTP handlers — reads input, calls repo, maps Result to response |
-| `posts.repository.ts` | Data access — uses `tryInfra`, returns `Result`, never throws |
-| `posts.errors.ts` | Typed domain error variants (`PostNotFound`, etc.) |
-| `usecases/` | Pure business logic — no DB, no async, fully unit-testable |
-| `__tests__/` | Integration test stubs |
-| `index.ts` | Wires routes to handlers, exports the router |
+| File                  | Purpose                                                          |
+| --------------------- | ---------------------------------------------------------------- |
+| `routes.ts`           | OpenAPI route definitions with Zod schemas                       |
+| `handlers.ts`         | HTTP handlers — reads input, calls repo, maps Result to response |
+| `posts.repository.ts` | Data access — uses `tryInfra`, returns `Result`, never throws    |
+| `posts.errors.ts`     | Typed domain error variants (`PostNotFound`, etc.)               |
+| `usecases/`           | Pure business logic — no DB, no async, fully unit-testable       |
+| `__tests__/`          | Integration test stubs                                           |
+| `index.ts`            | Wires routes to handlers, exports the router                     |
 
 Register it in `apps/backend/src/routes/index.ts`:
 
@@ -94,7 +105,8 @@ export const routes = [users, posts];
 export const publicRoutes = [health, posts];
 ```
 
-Then flesh out the repository with real Drizzle queries and add your DB schema to `packages/db/src/schema/`.
+Then flesh out the repository with real Drizzle queries and add your DB schema
+to `packages/db/src/schema/`.
 
 ### Add a Frontend Page
 
@@ -115,8 +127,8 @@ Done. TanStack Router handles the rest.
 Edit `packages/db/src/schema/` and run:
 
 ```bash
-pnpm db:generate   # Creates migration
-pnpm db:migrate    # Applies it
+deno task db:generate   # Creates migration
+deno task db:migrate    # Applies it
 ```
 
 ## Use the Batteries
@@ -124,7 +136,7 @@ pnpm db:migrate    # Applies it
 ### Upload Files
 
 ```typescript
-import { getUploadUrl, generateKey } from "@/lib/storage";
+import { generateKey, getUploadUrl } from "@/lib/storage";
 
 // Generate presigned upload URL
 const key = generateKey("photo.jpg", "avatars");
@@ -158,12 +170,13 @@ await addJob("email", {
 });
 ```
 
-Run workers: `pnpm --filter backend jobs`
+Run workers:
+`deno run --env-file=apps/backend/.env -A apps/backend/src/jobs/worker.ts`
 
 ### Rate Limit Routes
 
 ```typescript
-import { rateLimit, authRateLimit } from "@/lib/rate-limit";
+import { authRateLimit, rateLimit } from "@/lib/rate-limit";
 
 // 100 requests per minute
 app.use("/api/*", rateLimit());
@@ -174,9 +187,8 @@ app.post("/api/auth/login", authRateLimit, loginHandler);
 
 ## Deploy
 
-**Backend** → Docker on any VPS, or Railway/Render
-**Frontend** → Vercel (zero config)
-**Database** → Supabase, Neon, or Railway
+**Backend** → Docker on any VPS, or Railway/Render **Frontend** → Vercel (zero
+config) **Database** → Supabase, Neon, or Railway
 
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the full guide.
 
@@ -202,21 +214,30 @@ packages/
 
 ## Learn More
 
-- [Architecture Guide](apps/backend/docs/ARCHITECTURE.md) — How the backend is structured
-- [Backend Decisions](apps/backend/docs/DECISIONS.md) — Why each backend choice was made
-- [Frontend Decisions](apps/frontend/docs/DECISIONS.md) — Why each frontend choice was made
-- [Batteries Included](docs/BATTERIES.md) — All built-in utilities with usage examples
+- [Architecture Guide](apps/backend/docs/ARCHITECTURE.md) — How the backend is
+  structured
+- [Backend Decisions](apps/backend/docs/DECISIONS.md) — Why each backend choice
+  was made
+- [Frontend Decisions](apps/frontend/docs/DECISIONS.md) — Why each frontend
+  choice was made
+- [Batteries Included](docs/BATTERIES.md) — All built-in utilities with usage
+  examples
 - [Deployment Guide](docs/DEPLOYMENT.md) — Ship to production
 - [Writing Style Guide](docs/WRITING.md) — How we write docs and articles
 - [API Docs](http://localhost:9999/docs) — Auto-generated from your code
 
 ## This is a Template, Not a Framework
 
-When you create a repo from this template, you own it. There is no upstream to pull from. Delete what you don't need, rename what makes sense to rename, and diverge freely.
+When you create a repo from this template, you own it. There is no upstream to
+pull from. Delete what you don't need, rename what makes sense to rename, and
+diverge freely.
 
-What to keep: the `packages/shared` Result type, the `tryInfra` pattern, the module scaffolder, the Biome config.
+What to keep: the `packages/shared` Result type, the `tryInfra` pattern, the
+module scaffolder, the Deno config (`deno.json`), and the Biome config (frontend
+linting).
 
-What to replace: the example `users` module with your own domain, the license, this README.
+What to replace: the example `users` module with your own domain, the license,
+this README.
 
 ---
 
@@ -224,4 +245,5 @@ What to replace: the example `users` module with your own domain, the license, t
 
 Proprietary. Copyright © 2026 Orcta. All rights reserved.
 
-This codebase is not open source. Do not distribute, sublicense, or use outside the organisation without written permission.
+This codebase is not open source. Do not distribute, sublicense, or use outside
+the organisation without written permission.

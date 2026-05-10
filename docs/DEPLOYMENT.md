@@ -4,12 +4,12 @@ Get your app live in 15 minutes.
 
 ## TL;DR
 
-| Part | Where | Cost |
-|------|-------|------|
-| Backend | Railway, Render, or any VPS | $5-20/mo |
-| Frontend | Vercel | Free |
-| Database | Supabase, Neon, or Railway | Free tier available |
-| Redis | Upstash or Railway | Free tier available |
+| Part     | Where                       | Cost                |
+| -------- | --------------------------- | ------------------- |
+| Backend  | Railway, Render, or any VPS | $5-20/mo            |
+| Frontend | Vercel                      | Free                |
+| Database | Supabase, Neon, or Railway  | Free tier available |
+| Redis    | Upstash or Railway          | Free tier available |
 
 ## 1. Database
 
@@ -92,7 +92,7 @@ sudo systemctl reload caddy
 2. Import at [vercel.com/new](https://vercel.com/new)
 3. Set:
    - **Root Directory**: `apps/frontend`
-   - **Build Command**: `cd ../.. && pnpm build:frontend`
+   - **Build Command**: `cd ../.. && pnpm --filter frontend build`
    - **Output Directory**: `dist`
 4. Add environment variable:
    - `VITE_API_URL` = `https://api.yourdomain.com`
@@ -146,7 +146,8 @@ If you're using the job queue, run the worker alongside your API:
 
 Add a second service pointing to the same repo:
 
-- **Start Command**: `pnpm --filter backend jobs`
+- **Start Command**:
+  `deno run --env-file=.env -A apps/backend/src/jobs/worker.ts`
 
 ### VPS
 
@@ -157,7 +158,7 @@ docker run -d \
   -e DATABASE_URL="..." \
   -e REDIS_URL="..." \
   api \
-  node src/jobs/worker.js
+  deno run -A src/jobs/worker.ts
 ```
 
 ---
@@ -207,14 +208,11 @@ curl https://api.yourdomain.com/api/health
 
 ## Troubleshooting
 
-**502 Bad Gateway**
-→ Backend isn't running. Check logs: `docker logs api`
+**502 Bad Gateway** → Backend isn't running. Check logs: `docker logs api`
 
-**CORS errors**
-→ Make sure `FRONTEND_URL` matches exactly (including https)
+**CORS errors** → Make sure `FRONTEND_URL` matches exactly (including https)
 
-**Auth not working**
-→ Check `BETTER_AUTH_URL` matches your API domain
+**Auth not working** → Check `BETTER_AUTH_URL` matches your API domain
 
-**Database connection refused**
-→ Whitelist your server IP in your database provider's dashboard
+**Database connection refused** → Whitelist your server IP in your database
+provider's dashboard
