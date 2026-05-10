@@ -1,7 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
+import {
+	createRootRouteWithContext,
+	Link,
+	Outlet,
+} from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { Toaster } from "sonner";
+import { ErrorFallback } from "@/components/error-fallback";
 import { sessionQueryOptions } from "@/services/auth";
 
 interface RouterContext {
@@ -9,15 +14,26 @@ interface RouterContext {
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
-	// Prefetch the session once at the root of the route tree.
-	// Every child route receives context.session — no per-page auth fetch.
-	// After any auth mutation (signIn, signOut, signUp), invalidate
-	// sessionQueryOptions.queryKey and navigate; the router re-runs this.
 	beforeLoad: async ({ context }) => {
 		const session =
 			await context.queryClient.ensureQueryData(sessionQueryOptions);
 		return { session };
 	},
+	errorComponent: ErrorFallback,
+	notFoundComponent: () => (
+		<div className="min-h-screen flex items-center justify-center p-4">
+			<div className="text-center space-y-4">
+				<h1 className="text-4xl font-bold">404</h1>
+				<p className="text-muted-foreground">Page not found</p>
+				<Link
+					to="/"
+					className="inline-block text-sm font-medium underline underline-offset-4 hover:text-(--color-foreground)"
+				>
+					Go home
+				</Link>
+			</div>
+		</div>
+	),
 	component: RootComponent,
 });
 

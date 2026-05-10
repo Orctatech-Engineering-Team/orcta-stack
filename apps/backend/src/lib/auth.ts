@@ -3,9 +3,9 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { openAPI } from "better-auth/plugins";
 import { twoFactor } from "better-auth/plugins/two-factor";
-import { db, schema } from "@/db/index.ts";
-import { sendEmail } from "@/lib/email.ts";
-import { redis } from "@/lib/redis.ts";
+import { db, schema } from "@/db";
+import { sendEmail } from "@/lib/email";
+import { redis } from "@/lib/redis";
 import { passwordResetEmail, welcomeEmail } from "@repo/email-templates";
 import type { User as DbUser } from "@repo/db/schema";
 import env from "@/env.ts";
@@ -86,7 +86,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
-    minPasswordLength: 12,
+    minPasswordLength: 8,
     maxPasswordLength: 256,
     revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {
