@@ -18,7 +18,9 @@ export interface JobData {
 // queueEmail's no-Redis fallback to send inline, so both paths build the same email.
 export const emailTemplates: Record<
   EmailTemplateName,
-  (props: { name: string; actionUrl?: string }) => ReturnType<typeof welcomeEmail>
+  (
+    props: { name: string; actionUrl?: string },
+  ) => ReturnType<typeof welcomeEmail>
 > = {
   welcome: welcomeEmail,
   passwordReset: passwordResetEmail,

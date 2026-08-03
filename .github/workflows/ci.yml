@@ -40,16 +40,34 @@ jobs:
 
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.x
+          deno-version: "2.7.14"
 
       - name: Cache dependencies
         run: deno cache apps/backend/src/index.ts apps/backend/src/jobs/worker.ts
+
+      - name: Format check
+        run: deno fmt --check
 
       - name: Lint
         run: deno lint
 
       - name: Type check
         run: deno check apps/backend/src/index.ts
+
+      - name: Install frontend dependencies
+        working-directory: apps/frontend
+        run: deno install
+
+      - name: Frontend lint
+        run: deno run -A npm:@biomejs/biome@2.3.7 ci apps/frontend
+
+      - name: Frontend type check
+        working-directory: apps/frontend
+        run: deno task typecheck
+
+      - name: Frontend build
+        working-directory: apps/frontend
+        run: deno task build
 
       - name: Run migrations
         run: deno run --allow-env --allow-net --allow-read --allow-sys apps/backend/src/db/migrate.ts

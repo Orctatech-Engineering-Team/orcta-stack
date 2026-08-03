@@ -24,6 +24,9 @@
     "@std/expect": "jsr:@std/expect@^1.0.19",
     "@std/testing/bdd": "jsr:@std/testing@^1.0.19/bdd"
   },
+  "fmt": {
+    "exclude": ["apps/frontend", "**/*.md", "packages/db/migrations"]
+  },
   "nodeModulesDir": "auto",
   "sloppyImports": true
 }

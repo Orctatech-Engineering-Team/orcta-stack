@@ -4,21 +4,21 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 export const userRoleEnum = pgEnum("user_role", ["buyer", "seller", "admin"]);
 
 export const users = pgTable("users", {
-	id: text("id").primaryKey(),
-	email: text("email").notNull().unique(),
-	name: text("name").notNull(),
-	image: text("image"),
-	role: userRoleEnum("role").default("buyer").notNull(),
-	emailVerified: boolean("email_verified").default(false).notNull(),
-	twoFactorEnabled: boolean("two_factor_enabled").default(false).notNull(),
-	twoFactorSecret: text("two_factor_secret"),
-	backupCodes: text("backup_codes"),
-	createdAt: timestamp("created_at", { withTimezone: true })
-		.defaultNow()
-		.notNull(),
-	updatedAt: timestamp("updated_at", { withTimezone: true })
-		.defaultNow()
-		.notNull(),
+  id: text("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  image: text("image"),
+  role: userRoleEnum("role").default("buyer").notNull(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  twoFactorEnabled: boolean("two_factor_enabled").default(false).notNull(),
+  twoFactorSecret: text("two_factor_secret"),
+  backupCodes: text("backup_codes"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 // Zod schemas for validation
