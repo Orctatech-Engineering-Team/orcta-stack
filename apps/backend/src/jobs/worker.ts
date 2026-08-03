@@ -1,29 +1,18 @@
 import { type Job, Worker } from "bullmq";
 import pino from "pino";
 import { getRedis } from "@/lib/redis.ts";
-import type { JobData, JobName } from "./index.ts";
+import { sendEmail } from "@/lib/email.ts";
+import { emailTemplates, type JobData, type JobName } from "./index.ts";
 
 const logger = pino({ name: "worker" });
 
 const processors: { [K in JobName]: (job: Job<JobData[K]>) => Promise<void> } =
   {
     async email(job) {
-      logger.info(
-        { to: job.data.to, template: job.data.template },
-        "Processing email job",
-      );
-      // TODO: Implement email sending
-    },
-    async cleanup(job) {
-      logger.info(
-        { olderThanDays: job.data.olderThanDays },
-        "Processing cleanup job",
-      );
-      // TODO: Implement cleanup logic
-    },
-    async sync(job) {
-      logger.info({ userId: job.data.userId }, "Processing sync job");
-      // TODO: Implement sync logic
+      const { to, template, props } = job.data;
+      logger.info({ to, template }, "Processing email job");
+      const { subject, html, text } = emailTemplates[template](props);
+      await sendEmail({ to, subject, html, text });
     },
   };
 
@@ -46,7 +35,7 @@ function startWorker<T extends JobName>(name: T) {
   return worker;
 }
 
-const workers = (["email", "cleanup", "sync"] as JobName[]).map(startWorker);
+const workers = (["email"] as JobName[]).map(startWorker);
 
 async function shutdown() {
   logger.info("Shutting down workers...");

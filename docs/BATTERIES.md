@@ -263,9 +263,15 @@ ws.send(JSON.stringify({ type: "join", room: "chat-123" }));
 
 ## Background Jobs
 
-Process work asynchronously with [BullMQ](https://docs.bullmq.io).
+Process work asynchronously with [BullMQ](https://docs.bullmq.io). The one
+built-in job type is `email` — it's what powers the [Email](#email) battery's
+`queueEmail` helper, used by better-auth's sign-up and password-reset flows
+(`apps/backend/src/lib/auth.ts`) so those requests don't block on an outbound
+Resend API call.
 
-**Requires env var:** `REDIS_URL`
+**Requires env var:** `REDIS_URL` — without it, `queueEmail` degrades to
+sending inline instead of queuing (see [Email](#email)); code that calls
+`addJob` directly requires Redis.
 
 ### Setup
 
@@ -278,32 +284,45 @@ REDIS_URL=redis://localhost:6379
 Defined in `apps/backend/src/jobs/index.ts`:
 
 ```typescript
-export type JobName = "email" | "cleanup" | "sync";
+export type EmailTemplateName = "welcome" | "passwordReset";
+export type JobName = "email";
 
 export interface JobData {
-  email: { to: string; template: string; data: Record<string, unknown> };
-  cleanup: { olderThanDays: number };
-  sync: { userId: string };
+  email: {
+    to: string;
+    template: EmailTemplateName;
+    props: { name: string; actionUrl?: string };
+  };
 }
 ```
 
 ### Queue a job
 
+Prefer `queueEmail` (from `@/lib/email`) over `addJob` directly for emails —
+it queues through Redis when available and falls back to sending inline when
+it isn't, so the call site doesn't need to care:
+
+```typescript
+import { queueEmail } from "@/lib/email";
+
+await queueEmail({
+  to: "user@example.com",
+  template: "welcome",
+  props: { name: "Alex" },
+});
+```
+
+`addJob` is the lower-level primitive `queueEmail` and any future job types
+build on — it always requires Redis:
+
 ```typescript
 import { addJob } from "@/jobs";
 
-// Fire and forget
-await addJob("email", {
-  to: "user@example.com",
-  template: "welcome",
-  data: { name: "Alex" },
-});
-
-// With options
-await addJob("cleanup", { olderThanDays: 30 }, {
-  delay: 60_000, // wait 1 min before processing
-  priority: 10, // higher = processed first
-});
+await addJob(
+  "email",
+  { to: "user@example.com", template: "welcome", props: { name: "Alex" } },
+  { delay: 60_000, priority: 10 }, // optional: wait 1 min, higher priority = processed first
+);
 ```
 
 Jobs are automatically kept for the last 100 successes and 1 000 failures in
@@ -311,24 +330,16 @@ Redis.
 
 ### Process jobs
 
-Add your logic in `apps/backend/src/jobs/worker.ts` inside the `processors`
-object:
+`apps/backend/src/jobs/worker.ts`'s `processors.email` looks up the template
+by name (via the `emailTemplates` map exported from `jobs/index.ts`) and sends
+it:
 
 ```typescript
-const processors = {
+const processors: { [K in JobName]: (job: Job<JobData[K]>) => Promise<void> } = {
   async email(job) {
-    const { to, template, data } = job.data;
-    await sendEmail(to, template, data); // wire up your email sender
-  },
-
-  async sync(job) {
-    const { userId } = job.data;
-    // fetch external data, update DB, etc.
-  },
-
-  async cleanup(job) {
-    const { olderThanDays } = job.data;
-    // delete old records
+    const { to, template, props } = job.data;
+    const { subject, html, text } = emailTemplates[template](props);
+    await sendEmail({ to, subject, html, text });
   },
 };
 ```
@@ -349,11 +360,10 @@ server.
 
 1. Add the name to the `JobName` union and its payload to `JobData` in
    `jobs/index.ts`
-2. Create a queue getter following the existing pattern (`getSyncQueue` etc.)
+2. Add a queue getter following the existing `getEmailQueue` pattern
 3. Add the queue to the `queueMap` inside `addJob`
 4. Add a processor in `worker.ts`
-5. Add the job name to the workers array:
-   `(["email", "cleanup", "sync", "yourJob"] as JobName[])`
+5. Add the job name to the workers array: `(["email", "yourJob"] as JobName[])`
 
 ---
 
@@ -421,9 +431,14 @@ Every rate-limited response includes:
 
 ## Email
 
-Send transactional emails with [Resend](https://resend.com).
+Send transactional emails with [Resend](https://resend.com). Templates live
+in `@repo/email-templates`; `apps/backend/src/lib/email.ts` wraps Resend
+(`sendEmail`) and adds the [Background Jobs](#background-jobs)-aware
+`queueEmail` — the one both better-auth hooks (`sendResetPassword`,
+`sendVerificationEmail` in `apps/backend/src/lib/auth.ts`) actually call.
 
-**Requires env var:** `RESEND_API_KEY`
+**Requires env var:** `RESEND_API_KEY` — without it, `sendEmail` logs instead
+of sending, so email works end-to-end in dev with no setup.
 
 ### Setup
 
@@ -434,38 +449,28 @@ RESEND_API_KEY=re_xxxxx
 ### Usage
 
 ```typescript
-import { Resend } from "resend";
-import { passwordResetEmail, welcomeEmail } from "@repo/email-templates";
+import { queueEmail } from "@/lib/email";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Queues through Redis if REDIS_URL is set, otherwise sends inline
+await queueEmail({
+  to: "alex@example.com",
+  template: "welcome", // or "passwordReset"
+  props: { name: "Alex", actionUrl: "https://app.example.com/verify?token=xxx" },
+});
+```
 
-// Welcome email
-const welcome = welcomeEmail({
+Need to send immediately, bypassing the queue entirely? Use `sendEmail` with a
+template directly:
+
+```typescript
+import { sendEmail } from "@/lib/email";
+import { welcomeEmail } from "@repo/email-templates";
+
+const { subject, html, text } = welcomeEmail({
   name: "Alex",
   actionUrl: "https://app.example.com/verify?token=xxx",
 });
-
-await resend.emails.send({
-  from: "hello@yourdomain.com",
-  to: "alex@example.com",
-  subject: welcome.subject,
-  html: welcome.html,
-  text: welcome.text,
-});
-
-// Password reset
-const reset = passwordResetEmail({
-  name: "Alex",
-  actionUrl: "https://app.example.com/reset?token=xxx",
-});
-
-await resend.emails.send({
-  from: "hello@yourdomain.com",
-  to: "alex@example.com",
-  subject: reset.subject,
-  html: reset.html,
-  text: reset.text,
-});
+await sendEmail({ to: "alex@example.com", subject, html, text });
 ```
 
 ### Available templates

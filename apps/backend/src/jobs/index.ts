@@ -1,14 +1,28 @@
 import { Queue } from "bullmq";
+import { passwordResetEmail, welcomeEmail } from "@repo/email-templates";
 import { getRedis } from "@/lib/redis";
 
-// Define your job types
-export type JobName = "email" | "cleanup" | "sync";
+export type EmailTemplateName = "welcome" | "passwordReset";
+
+export type JobName = "email";
 
 export interface JobData {
-  email: { to: string; template: string; data: Record<string, unknown> };
-  cleanup: { olderThanDays: number };
-  sync: { userId: string };
+  email: {
+    to: string;
+    template: EmailTemplateName;
+    props: { name: string; actionUrl?: string };
+  };
 }
+
+// Shared template lookup — used by the worker to process queued jobs and by
+// queueEmail's no-Redis fallback to send inline, so both paths build the same email.
+export const emailTemplates: Record<
+  EmailTemplateName,
+  (props: { name: string; actionUrl?: string }) => ReturnType<typeof welcomeEmail>
+> = {
+  welcome: welcomeEmail,
+  passwordReset: passwordResetEmail,
+};
 
 // Create queues
 function createQueue<T extends JobName>(name: T) {
@@ -18,34 +32,20 @@ function createQueue<T extends JobName>(name: T) {
 
 // Export queues (lazy initialization)
 let emailQueue: Queue<JobData["email"]> | null = null;
-let cleanupQueue: Queue<JobData["cleanup"]> | null = null;
-let syncQueue: Queue<JobData["sync"]> | null = null;
 
 export function getEmailQueue(): Queue<JobData["email"]> {
   if (!emailQueue) emailQueue = createQueue("email");
   return emailQueue;
 }
 
-export function getCleanupQueue(): Queue<JobData["cleanup"]> {
-  if (!cleanupQueue) cleanupQueue = createQueue("cleanup");
-  return cleanupQueue;
-}
-
-export function getSyncQueue(): Queue<JobData["sync"]> {
-  if (!syncQueue) syncQueue = createQueue("sync");
-  return syncQueue;
-}
-
 // Helper to add jobs
-export async function addJob<T extends JobName>(
+export function addJob<T extends JobName>(
   name: T,
   data: JobData[T],
   options?: { delay?: number; priority?: number },
 ) {
   const queueMap = {
     email: getEmailQueue(),
-    cleanup: getCleanupQueue(),
-    sync: getSyncQueue(),
   };
 
   const queue = queueMap[name];

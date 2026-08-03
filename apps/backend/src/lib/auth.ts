@@ -4,9 +4,8 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { openAPI } from "better-auth/plugins";
 import { twoFactor } from "better-auth/plugins/two-factor";
 import { db, schema } from "@/db";
-import { sendEmail } from "@/lib/email";
+import { queueEmail } from "@/lib/email";
 import { redis } from "@/lib/redis";
-import { passwordResetEmail, welcomeEmail } from "@repo/email-templates";
 import type { User as DbUser } from "@repo/db/schema";
 import env from "@/env.ts";
 
@@ -90,12 +89,10 @@ export const auth = betterAuth({
     maxPasswordLength: 256,
     revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {
-      const template = passwordResetEmail({ name: user.name, actionUrl: url });
-      await sendEmail({
+      await queueEmail({
         to: user.email,
-        subject: template.subject,
-        html: template.html,
-        text: template.text,
+        template: "passwordReset",
+        props: { name: user.name, actionUrl: url },
       });
     },
     password: {
@@ -106,12 +103,10 @@ export const auth = betterAuth({
   },
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
-      const template = welcomeEmail({ name: user.name, actionUrl: url });
-      await sendEmail({
+      await queueEmail({
         to: user.email,
-        subject: template.subject,
-        html: template.html,
-        text: template.text,
+        template: "welcome",
+        props: { name: user.name, actionUrl: url },
       });
     },
     sendOnSignUp: true,
