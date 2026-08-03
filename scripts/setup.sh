@@ -23,7 +23,7 @@ if ! command -v deno >/dev/null 2>&1; then
   error "Deno not found. Install v2+ from https://deno.com"
   exit 1
 fi
-DENO_MAJOR=$(deno --version | head -1 | grep -oP '\d+' | head -1)
+DENO_MAJOR=$(deno --version | head -1 | grep -oE '[0-9]+' | head -1)
 if [[ "$DENO_MAJOR" -lt 2 ]]; then
   error "Deno v${DENO_MAJOR} found — v2 or higher required."
   exit 1
