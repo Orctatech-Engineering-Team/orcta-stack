@@ -27,11 +27,11 @@ deno task dev      # Backend on :9999
 In a separate terminal:
 
 ```bash
-deno task dev:frontend   # Frontend on :5173 via Vite
+deno task dev:frontend   # Frontend on :3000 via Vite
 ```
 
 Backend on [localhost:9999/docs](http://localhost:9999/docs). Frontend on
-[localhost:5173](http://localhost:5173). Run both together or independently.
+[localhost:3000](http://localhost:3000). Run both together or independently.
 
 ---
 

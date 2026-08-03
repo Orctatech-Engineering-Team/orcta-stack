@@ -130,7 +130,7 @@ cat > "${MODULE_DIR}/${MODULE}.usecases.ts" << EOF
 //   return ok(input);
 // }
 EOF
-success "usecases/${MODULE}.usecases.ts"
+success "${MODULE}.usecases.ts"
 
 # ── handlers.ts ────────────────────────────────────────────────────────────────
 cat > "${MODULE_DIR}/handlers.ts" << EOF

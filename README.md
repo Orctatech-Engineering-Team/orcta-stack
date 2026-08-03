@@ -90,7 +90,7 @@ This scaffolds a complete module at `apps/backend/src/modules/posts/`:
 | `handlers.ts`         | HTTP handlers — reads input, calls repo, maps Result to response |
 | `posts.repository.ts` | Data access — uses `tryInfra`, returns `Result`, never throws    |
 | `posts.errors.ts`     | Typed domain error variants (`PostNotFound`, etc.)               |
-| `usecases/`           | Pure business logic — no DB, no async, fully unit-testable       |
+| `posts.usecases.ts`   | Pure business logic — no DB, no async, fully unit-testable       |
 | `__tests__/`          | Integration test stubs                                           |
 | `index.ts`            | Wires routes to handlers, exports the router                     |
 
