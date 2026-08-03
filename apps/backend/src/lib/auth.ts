@@ -121,7 +121,14 @@ export const auth = betterAuth({
   },
   secondaryStorage,
   rateLimit: {
-    enabled: true,
+    // better-auth applies a built-in 3-requests-per-10s rule to
+    // /sign-in, /sign-up, /change-password, /change-email regardless of the
+    // max below. With storage: "secondary-storage" and no Redis configured,
+    // that storage layer silently no-ops (optional chaining on an undefined
+    // secondaryStorage), so the limit was never actually enforced outside
+    // of environments with Redis — including the integration test suite,
+    // which legitimately signs up/in many users in quick succession.
+    enabled: env.NODE_ENV !== "test",
     window: 10,
     max: 100,
     storage: "secondary-storage",
