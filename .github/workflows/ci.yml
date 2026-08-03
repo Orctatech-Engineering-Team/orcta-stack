@@ -40,7 +40,11 @@ jobs:
 
       - uses: denoland/setup-deno@v2
         with:
-          deno-version: "2.7.14"
+          # 2.9.0, not 2.7.14 (what the Dockerfiles pin) — the Node-compat
+          # layer needed for jsdom's undici dependency to work isn't present
+          # until 2.8.0. Test-tooling only; production images are unaffected
+          # since they never run `deno test`.
+          deno-version: "2.9.0"
 
       - name: Cache dependencies
         run: deno cache apps/backend/src/index.ts apps/backend/src/jobs/worker.ts
@@ -75,7 +79,11 @@ jobs:
           DATABASE_URL: postgres://test:test@localhost:5432/test
 
       - name: Test
-        run: deno test -A
+        # Excludes apps/frontend deliberately — its jsdom-based tests run in
+        # a separate process below. A frontend DOM-testing crash previously
+        # took down unrelated backend test results by corrupting the shared
+        # fetch/undici runtime when run in the same `deno test` invocation.
+        run: deno test -A --ignore=apps/frontend
         env:
           NODE_ENV: test
           DATABASE_URL: postgres://test:test@localhost:5432/test
@@ -84,3 +92,7 @@ jobs:
           BETTER_AUTH_URL: http://localhost:9999
           SERVER_URL: http://localhost:9999
           FRONTEND_URL: http://localhost:3000
+
+      - name: Frontend test
+        working-directory: apps/frontend
+        run: deno task test
