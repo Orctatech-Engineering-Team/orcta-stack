@@ -1,29 +1,29 @@
 {
-	"workspace": [
-		"apps/backend",
-		"apps/frontend",
-		"packages/shared",
-		"packages/db",
-		"packages/email-templates"
-	],
-	"tasks": {
-		"dev": "deno task --cwd=apps/backend dev",
-		"dev:backend": "deno task --cwd=apps/backend dev",
-		"dev:frontend": "deno task --cwd=apps/frontend dev",
-		"start": "deno task --cwd=apps/backend start",
-		"worker": "deno task --cwd=apps/backend worker",
-		"test": "deno task --cwd=apps/backend test",
-		"lint": "deno lint",
-		"fmt": "deno fmt",
-		"check": "deno check apps/backend/src/index.ts apps/backend/src/jobs/worker.ts",
-		"db:migrate": "deno task --cwd=apps/backend db:migrate",
-		"db:studio": "deno task --cwd=apps/backend db:studio",
-		"db:generate": "deno task --cwd=apps/backend db:generate"
-	},
-	"imports": {
-		"@std/expect": "jsr:@std/expect@^1.0.19",
-		"@std/testing/bdd": "jsr:@std/testing@^1.0.19/bdd"
-	},
-	"nodeModulesDir": "auto",
-	"sloppyImports": true
+  "workspace": [
+    "apps/backend",
+    "apps/frontend",
+    "packages/shared",
+    "packages/db",
+    "packages/email-templates"
+  ],
+  "tasks": {
+    "dev": "deno task --cwd=apps/backend dev",
+    "dev:backend": "deno task --cwd=apps/backend dev",
+    "dev:frontend": "deno task --cwd=apps/frontend dev",
+    "start": "deno task --cwd=apps/backend start",
+    "worker": "deno task --cwd=apps/backend worker",
+    "test": "deno task --cwd=apps/backend test",
+    "lint": "deno lint",
+    "fmt": "deno fmt",
+    "check": "deno check apps/backend/src/index.ts apps/backend/src/jobs/worker.ts",
+    "db:migrate": "deno task --cwd=apps/backend db:migrate",
+    "db:studio": "deno task --cwd=apps/backend db:studio",
+    "db:generate": "deno task --cwd=apps/backend db:generate"
+  },
+  "imports": {
+    "@std/expect": "jsr:@std/expect@^1.0.19",
+    "@std/testing/bdd": "jsr:@std/testing@^1.0.19/bdd"
+  },
+  "nodeModulesDir": "auto",
+  "sloppyImports": true
 }
