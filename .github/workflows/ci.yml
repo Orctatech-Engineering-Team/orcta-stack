@@ -7,7 +7,7 @@ on:
     branches: [master]
 
 jobs:
-  check:
+  backend:
     runs-on: ubuntu-latest
 
     services:
@@ -53,10 +53,44 @@ jobs:
         run: deno fmt --check
 
       - name: Lint
-        run: deno lint
+        # Excludes apps/frontend — Biome is the linter of record for it,
+        # checked in the frontend job. Avoids double-linting the same files
+        # with two different rulesets.
+        run: deno lint --ignore=apps/frontend
 
       - name: Type check
         run: deno check apps/backend/src/index.ts
+
+      - name: Run migrations
+        run: deno run --allow-env --allow-net --allow-read --allow-sys apps/backend/src/db/migrate.ts
+        env:
+          DATABASE_URL: postgres://test:test@localhost:5432/test
+
+      - name: Test
+        # Excludes apps/frontend deliberately — its jsdom-based tests run in
+        # the frontend job, in a separate process. A frontend DOM-testing
+        # crash previously took down unrelated backend test results by
+        # corrupting the shared fetch/undici runtime when run in the same
+        # `deno test` invocation.
+        run: deno test -A --ignore=apps/frontend
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgres://test:test@localhost:5432/test
+          REDIS_URL: redis://localhost:6379
+          BETTER_AUTH_SECRET: test-secret-for-ci-at-least-32-chars
+          BETTER_AUTH_URL: http://localhost:9999
+          SERVER_URL: http://localhost:9999
+          FRONTEND_URL: http://localhost:3000
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.9.0"
 
       - name: Install frontend dependencies
         working-directory: apps/frontend
@@ -72,26 +106,6 @@ jobs:
       - name: Frontend build
         working-directory: apps/frontend
         run: deno task build
-
-      - name: Run migrations
-        run: deno run --allow-env --allow-net --allow-read --allow-sys apps/backend/src/db/migrate.ts
-        env:
-          DATABASE_URL: postgres://test:test@localhost:5432/test
-
-      - name: Test
-        # Excludes apps/frontend deliberately — its jsdom-based tests run in
-        # a separate process below. A frontend DOM-testing crash previously
-        # took down unrelated backend test results by corrupting the shared
-        # fetch/undici runtime when run in the same `deno test` invocation.
-        run: deno test -A --ignore=apps/frontend
-        env:
-          NODE_ENV: test
-          DATABASE_URL: postgres://test:test@localhost:5432/test
-          REDIS_URL: redis://localhost:6379
-          BETTER_AUTH_SECRET: test-secret-for-ci-at-least-32-chars
-          BETTER_AUTH_URL: http://localhost:9999
-          SERVER_URL: http://localhost:9999
-          FRONTEND_URL: http://localhost:3000
 
       - name: Frontend test
         working-directory: apps/frontend
