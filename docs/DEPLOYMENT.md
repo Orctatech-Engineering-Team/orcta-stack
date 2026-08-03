@@ -192,30 +192,43 @@ docker run -d \
 
 ## Environment Variables Reference
 
+Every var below is set in `apps/backend/.env` (see `.env.example` for the
+full annotated template). See [docs/BATTERIES.md](BATTERIES.md) for what each
+battery does once its vars are set, not just which vars exist.
+
 ### Required
 
 ```bash
 DATABASE_URL=postgres://user:pass@host:5432/db
 BETTER_AUTH_SECRET=<32+ random characters>
 BETTER_AUTH_URL=https://api.yourdomain.com
+SERVER_URL=https://api.yourdomain.com   # usually the same as BETTER_AUTH_URL
 FRONTEND_URL=https://yourdomain.com
 ```
 
 ### Optional
 
 ```bash
-# Redis
+# Redis — background jobs (BATTERIES.md#background-jobs), caching (#caching)
 REDIS_URL=redis://...
 
-# File storage
+# File storage — presigned S3/R2 uploads (BATTERIES.md#file-uploads)
 S3_ENDPOINT=https://...
 S3_BUCKET=uploads
 S3_REGION=auto
 S3_ACCESS_KEY_ID=...
 S3_SECRET_ACCESS_KEY=...
 
-# Email
+# Email — Resend (BATTERIES.md#email). Without this, sendEmail logs instead
+# of sending, so auth flows still work end-to-end in dev with no setup.
 RESEND_API_KEY=re_...
+
+# Social OAuth — activates only when both vars for a provider are set
+# (BATTERIES.md#social-oauth-google--github)
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GITHUB_CLIENT_ID=...
+GITHUB_CLIENT_SECRET=...
 
 # Tuning
 PORT=9999

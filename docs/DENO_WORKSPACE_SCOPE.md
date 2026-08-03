@@ -106,11 +106,28 @@ and test config.
 No `@repo/*` entries — those resolve through workspace bare specifiers. No
 `nodeModulesDir` — that's a root-level concern per Deno docs.
 
+Its `compilerOptions.module`/`moduleResolution` are set to `NodeNext`, unlike
+every other workspace member. This isn't inherited boilerplate — the backend's
+`imports` map pulls in several CJS-authored npm packages with dual-package
+`exports` maps (`bullmq`, `ioredis`, `pino`, `@aws-sdk/*`). `NodeNext`
+resolution is what correctly types their default exports and `require()`-style
+interop; the plain resolution the other members use would misinfer or reject
+some of those imports.
+
 ### `apps/frontend/deno.json`
 
 Consumer member only. Has `@/*` import map for Vite/React imports. No `name` or
 `exports` — nothing imports the frontend. Uses `deno run -A npm:vite` for dev
 and build tasks.
+
+It coexists with a separate `apps/frontend/tsconfig.json` rather than folding
+everything into `compilerOptions` here — `tsconfig.json` is load-bearing for
+`tsc --noEmit` (the actual `typecheck` task) and for Vite's `tsconfigPaths`
+resolution (`vite.config.ts`'s `resolve.tsconfigPaths: true`), neither of
+which reads `deno.json`. `deno.json`'s own `compilerOptions` (`jsx`, `lib`,
+`types`) exist separately for `deno check`/`deno test`/the Deno LSP. They're
+two different type-checkers with two different config files by necessity, not
+an inconsistency to clean up.
 
 ### `packages/shared/deno.json`
 
