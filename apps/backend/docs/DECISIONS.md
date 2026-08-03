@@ -266,6 +266,50 @@ See the
 [Better Auth database docs](https://www.better-auth.com/docs/concepts/database)
 for the full table reference and plugin schema additions.
 
+**Gotcha: rate limiting silently no-ops without Redis**
+
+better-auth ships a built-in rate-limit rule — 3 requests per 10 seconds on
+`/sign-in`, `/sign-up`, `/change-password`, `/change-email` — that overrides
+whatever `max` you configure at the top level. This project points
+`rateLimit.storage` at `"secondary-storage"`:
+
+```typescript
+rateLimit: {
+  enabled: env.NODE_ENV !== "test",
+  window: 10,
+  max: 100,
+  storage: "secondary-storage",
+},
+```
+
+`"secondary-storage"` means better-auth calls `ctx.options.secondaryStorage`
+to persist rate-limit counters. In this codebase, `secondaryStorage` is only
+defined when `REDIS_URL` is set:
+
+```typescript
+const secondaryStorage = redis
+  ? { get: ..., set: ..., delete: ... }
+  : undefined;
+```
+
+Without Redis, better-auth's own rate-limit code calls
+`ctx.options.secondaryStorage?.get(key)` — optional chaining on `undefined`
+resolves to `undefined` and short-circuits. `get()` always reports "no prior
+request," `set()` is a silent no-op. The 3-per-10s rule is configured but
+never actually enforced.
+
+I found this the hard way: `apps/backend/src/modules/users/__tests__/handlers.test.ts`
+passed locally for months because nobody runs the test suite with `REDIS_URL`
+set by hand. CI provisions Redis unconditionally, so the rule went from
+inert to real the moment it ran there — and a test suite that legitimately
+signs up a dozen users in a few seconds blew through it instantly, turning
+into 429s that the tests then read as 401s (no session cookie, because the
+sign-up/sign-in call that was supposed to produce one got rate-limited
+instead). `enabled: env.NODE_ENV !== "test"` keeps the protection in every
+real environment and turns it off for the one environment where Redis being
+present or absent was only ever a test-infra accident, never a security
+decision.
+
 **Trade-offs**:
 
 - Newer library, smaller community than Auth.js/Lucia

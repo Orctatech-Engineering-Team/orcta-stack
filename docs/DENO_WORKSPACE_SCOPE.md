@@ -231,3 +231,37 @@ React, etc.). The Deno workspace and pnpm workspace coexist — Deno handles the
 backend and packages, pnpm handles the frontend's npm deps. The `package.json`
 has been cleaned up: no `@repo/*` workspace deps (those are resolved via Deno
 workspace now).
+
+### 6. Frontend tests need Deno ≥ 2.8.0, and they run in their own process
+
+`apps/frontend`'s tests use `npm:jsdom` under `deno test`
+(`apps/frontend/src/test-setup.ts` installs the DOM globals). `jsdom@30`
+pulls in `undici@8.9.0`, whose `CacheStorage` constructor calls
+`webidl.util.markAsUncloneable` — a Node-compat function Deno doesn't
+provide until 2.8.0. On 2.7.14 (what the Dockerfiles pin for
+production), it throws:
+
+```
+error: (in promise) TypeError: webidl.util.markAsUncloneable is not a function
+    at new CacheStorage (.../undici@8.9.0/node_modules/undici/lib/web/cache/cachestorage.js:20:17)
+    at Object.<anonymous> (.../jsdom@30.0.1/node_modules/jsdom/lib/api.js:12:33)
+```
+
+I found this by installing 2.7.14 with `mise` and reproducing it directly,
+then bisecting up to 2.8.0 where it's fixed. CI pins `2.9.0` — a full
+minor ahead of what ships in the Docker images — because test-tooling
+correctness and production-runtime parity are different concerns here: the
+Dockerfiles never run `deno test`, so they don't need the newer Deno, and
+floating CI's version just to chase this fix would reintroduce the exact
+drift `deno-version` pinning was meant to prevent.
+
+The second half of this: don't run `deno test -A` unscoped from the repo
+root once `apps/frontend` has tests. Deno's workspace auto-discovery will
+happily sweep frontend and backend test files into one process, and an
+uncaught rejection in one (like the jsdom crash above, before it was fixed)
+corrupts shared runtime state — like the global `fetch`/`undici`
+implementation — for the other. I watched it take out unrelated
+`handlers.test.ts` assertions in the same CI run, with no code connecting
+the two. CI runs `deno test -A --ignore=apps/frontend` and a separate
+`deno task test` inside `apps/frontend` as two different steps — two
+processes, two failure domains.
