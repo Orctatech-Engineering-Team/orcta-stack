@@ -22,7 +22,7 @@
 	},
 	"imports": {
 		"@std/expect": "jsr:@std/expect@^1.0.19",
-		"@std/testing/bdd": "jsr:@std/testing@^1.0.18/bdd"
+		"@std/testing/bdd": "jsr:@std/testing@^1.0.19/bdd"
 	},
 	"nodeModulesDir": "auto",
 	"sloppyImports": true
