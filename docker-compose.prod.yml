@@ -1,10 +1,18 @@
 # Production docker-compose — used by the CD pipeline on the VPS.
 # Dev services (MinIO, exposed DB ports) are intentionally excluded.
 #
-# The backend image is built by CI and pushed to GHCR.
+# Images are built by CI and pushed to GHCR.
 # Required: .env.production on the VPS (never committed to git).
 
 services:
+  frontend:
+    image: ghcr.io/orctatech-engineering-team/orcta-frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
   db:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -17,7 +25,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "${POSTGRES_USER:-orcta}" ]
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-orcta}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,7 +36,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -37,13 +45,39 @@ services:
     image: ghcr.io/orctatech-engineering-team/orcta-backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env.production
-    ports:
-      - "9292:9292"
+    expose:
+      - "9999"
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  # Runs migrations from the repo checkout on the VPS. The backend image
+  # (orcta-backend) is a compiled standalone binary on bare alpine — no deno
+  # executable, no source tree — so it can't run migrate.ts itself. This
+  # service uses the same Deno base image the backend Dockerfile builds
+  # with, mounting the deploy directory instead of baking source into an
+  # image. Opt-in only (profiles) — never starts via `docker compose up`.
+  migrate:
+    image: denoland/deno:debian-2.7.14
+    working_dir: /app
+    volumes:
+      - .:/app
+    env_file: .env.production
+    depends_on:
+      db:
+        condition: service_healthy
+    command: [
+      "deno",
+      "run",
+      "--allow-env",
+      "--allow-net",
+      "--allow-read",
+      "--allow-sys",
+      "apps/backend/src/db/migrate.ts",
+    ]
+    profiles: ["tools"]
 
 volumes:
   postgres_data:

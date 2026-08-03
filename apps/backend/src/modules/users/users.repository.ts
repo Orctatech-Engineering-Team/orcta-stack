@@ -12,66 +12,68 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { InfrastructureError } from "@/lib/error";
 import { tryInfra } from "@/lib/infra";
-import type { EmailTaken, UserNotFound } from "./users.errors";
+import type { EmailTaken, UserNotFound } from "./users.errors.ts";
 
 export async function findUserById(
-	id: string,
+  id: string,
 ): Promise<Result<User, UserNotFound | InfrastructureError>> {
-	const result = await tryInfra(`fetch user ${id}`, () =>
-		db.query.users.findFirst({ where: eq(users.id, id) }),
-	);
-	if (!result.ok) return result;
-	if (!result.value) return err({ type: "USER_NOT_FOUND", lookup: id });
-	return ok(result.value);
+  const result = await tryInfra(
+    `fetch user ${id}`,
+    () => db.query.users.findFirst({ where: eq(users.id, id) }),
+  );
+  if (!result.ok) return result;
+  if (!result.value) return err({ type: "USER_NOT_FOUND", lookup: id });
+  return ok(result.value);
 }
 
 export async function findUserByEmail(
-	email: string,
+  email: string,
 ): Promise<Result<User, UserNotFound | InfrastructureError>> {
-	const result = await tryInfra(`fetch user by email`, () =>
-		db.query.users.findFirst({ where: eq(users.email, email) }),
-	);
-	if (!result.ok) return result;
-	if (!result.value) return err({ type: "USER_NOT_FOUND", lookup: email });
-	return ok(result.value);
+  const result = await tryInfra(
+    `fetch user by email`,
+    () => db.query.users.findFirst({ where: eq(users.email, email) }),
+  );
+  if (!result.ok) return result;
+  if (!result.value) return err({ type: "USER_NOT_FOUND", lookup: email });
+  return ok(result.value);
 }
 
 export async function createUser(
-	data: InsertUser,
+  data: InsertUser,
 ): Promise<Result<User, EmailTaken | InfrastructureError>> {
-	// Check for existing email first — turns a DB constraint error into a typed domain error.
-	const existing = await tryInfra(`check email ${data.email}`, () =>
-		db.query.users.findFirst({ where: eq(users.email, data.email) }),
-	);
-	if (!existing.ok) return existing;
-	if (existing.value) return err({ type: "EMAIL_TAKEN", email: data.email });
+  // Check for existing email first — turns a DB constraint error into a typed domain error.
+  const existing = await tryInfra(
+    `check email ${data.email}`,
+    () => db.query.users.findFirst({ where: eq(users.email, data.email) }),
+  );
+  if (!existing.ok) return existing;
+  if (existing.value) return err({ type: "EMAIL_TAKEN", email: data.email });
 
-	const result = await tryInfra("create user", () =>
-		db
-			.insert(users)
-			.values(data)
-			.returning()
-			.then((rows) => rows[0]),
-	);
-	if (!result.ok) return result;
-	if (!result.value)
-		return err(new InfrastructureError("Insert returned no rows"));
-	return ok(result.value);
+  const result = await tryInfra("create user", () =>
+    db
+      .insert(users)
+      .values(data)
+      .returning()
+      .then((rows) => rows[0]));
+  if (!result.ok) return result;
+  if (!result.value) {
+    return err(new InfrastructureError("Insert returned no rows"));
+  }
+  return ok(result.value);
 }
 
 export async function updateUser(
-	id: string,
-	data: Partial<InsertUser>,
+  id: string,
+  data: Partial<InsertUser>,
 ): Promise<Result<User, UserNotFound | InfrastructureError>> {
-	const result = await tryInfra(`update user ${id}`, () =>
-		db
-			.update(users)
-			.set(data)
-			.where(eq(users.id, id))
-			.returning()
-			.then((rows) => rows[0]),
-	);
-	if (!result.ok) return result;
-	if (!result.value) return err({ type: "USER_NOT_FOUND", lookup: id });
-	return ok(result.value);
+  const result = await tryInfra(`update user ${id}`, () =>
+    db
+      .update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning()
+      .then((rows) => rows[0]));
+  if (!result.ok) return result;
+  if (!result.value) return err({ type: "USER_NOT_FOUND", lookup: id });
+  return ok(result.value);
 }

@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:9999";
+const BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
 // ─── Typed API error ──────────────────────────────────────────────────────────
 // Thrown for any non-2xx response so callers can distinguish HTTP failures

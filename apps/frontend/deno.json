@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"]
+  },
+  "imports": {
+    "@/": "./src/"
+  },
+  "exclude": ["node_modules", "dist", ".tanstack"],
+  "tasks": {
+    "dev": "deno run -A npm:vite dev --port 3000",
+    "build": "deno run -A npm:vite build",
+    "preview": "deno run -A npm:vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "deno test -A"
+  },
+  "test": {
+    "include": ["src/**/*.test.ts", "src/**/*.test.tsx"]
+  },
+  "lint": {
+    "rules": {
+      "exclude": ["no-explicit-any", "no-non-null-assertion"]
+    }
+  }
+}

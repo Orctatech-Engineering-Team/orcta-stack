@@ -4,12 +4,13 @@ Get your app live in 15 minutes.
 
 ## TL;DR
 
-| Part | Where | Cost |
-|------|-------|------|
-| Backend | Railway, Render, or any VPS | $5-20/mo |
-| Frontend | Vercel | Free |
-| Database | Supabase, Neon, or Railway | Free tier available |
-| Redis | Upstash or Railway | Free tier available |
+| Part       | Where                       | Cost                |
+| ---------- | --------------------------- | ------------------- |
+| Full stack | Docker Compose on any VPS   | $5-20/mo            |
+| Backend    | Railway, Render, or any VPS | $5-20/mo            |
+| Frontend   | Vercel, or Docker on VPS    | Free                |
+| Database   | Supabase, Neon, or Railway  | Free tier available |
+| Redis      | Upstash or Railway          | Free tier available |
 
 ## 1. Database
 
@@ -50,7 +51,33 @@ FRONTEND_URL=https://<your-vercel-url>
 
 1. Railway auto-deploys on push
 
-### Option B: Any VPS (more control)
+### Option B: Docker Compose (whole stack on one VPS)
+
+The simplest production setup: one subdomain, Caddy reverse proxy with
+path-based routing. Caddy serves the SPA frontend at `/` and proxies `/api/*` to
+the backend.
+
+```bash
+# Install dependencies
+curl -fsSL https://get.docker.com | sh
+
+# Clone
+git clone <your-repo> app && cd app
+
+# Set secrets
+echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)" >> .env
+echo "DATABASE_URL=postgres://..." >> .env
+echo "BETTER_AUTH_URL=https://yourdomain.com" >> .env
+echo "FRONTEND_URL=https://yourdomain.com" >> .env
+
+# Start everything
+docker compose up -d
+```
+
+See `docker-compose.yml` for the full service definition. The frontend runs on
+port 80 (Caddy) and the backend on port 9999 (internal).
+
+### Option C: Any VPS (separate services)
 
 SSH into your server:
 
@@ -58,7 +85,7 @@ SSH into your server:
 # Install dependencies
 curl -fsSL https://get.docker.com | sh
 
-# Clone and build
+# Clone and build backend
 git clone <your-repo> app && cd app
 docker build -t api -f apps/backend/Dockerfile .
 
@@ -92,7 +119,7 @@ sudo systemctl reload caddy
 2. Import at [vercel.com/new](https://vercel.com/new)
 3. Set:
    - **Root Directory**: `apps/frontend`
-   - **Build Command**: `cd ../.. && pnpm build:frontend`
+   - **Build Command**: `cd ../.. && pnpm --filter frontend build`
    - **Output Directory**: `dist`
 4. Add environment variable:
    - `VITE_API_URL` = `https://api.yourdomain.com`
@@ -146,7 +173,8 @@ If you're using the job queue, run the worker alongside your API:
 
 Add a second service pointing to the same repo:
 
-- **Start Command**: `pnpm --filter backend jobs`
+- **Start Command**:
+  `deno run --env-file=.env -A apps/backend/src/jobs/worker.ts`
 
 ### VPS
 
@@ -157,12 +185,16 @@ docker run -d \
   -e DATABASE_URL="..." \
   -e REDIS_URL="..." \
   api \
-  node src/jobs/worker.js
+  deno run -A src/jobs/worker.ts
 ```
 
 ---
 
 ## Environment Variables Reference
+
+Every var below is set in `apps/backend/.env` (see `.env.example` for the
+full annotated template). See [docs/BATTERIES.md](BATTERIES.md) for what each
+battery does once its vars are set, not just which vars exist.
 
 ### Required
 
@@ -170,24 +202,33 @@ docker run -d \
 DATABASE_URL=postgres://user:pass@host:5432/db
 BETTER_AUTH_SECRET=<32+ random characters>
 BETTER_AUTH_URL=https://api.yourdomain.com
+SERVER_URL=https://api.yourdomain.com   # usually the same as BETTER_AUTH_URL
 FRONTEND_URL=https://yourdomain.com
 ```
 
 ### Optional
 
 ```bash
-# Redis
+# Redis — background jobs (BATTERIES.md#background-jobs), caching (#caching)
 REDIS_URL=redis://...
 
-# File storage
+# File storage — presigned S3/R2 uploads (BATTERIES.md#file-uploads)
 S3_ENDPOINT=https://...
 S3_BUCKET=uploads
 S3_REGION=auto
 S3_ACCESS_KEY_ID=...
 S3_SECRET_ACCESS_KEY=...
 
-# Email
+# Email — Resend (BATTERIES.md#email). Without this, sendEmail logs instead
+# of sending, so auth flows still work end-to-end in dev with no setup.
 RESEND_API_KEY=re_...
+
+# Social OAuth — activates only when both vars for a provider are set
+# (BATTERIES.md#social-oauth-google--github)
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GITHUB_CLIENT_ID=...
+GITHUB_CLIENT_SECRET=...
 
 # Tuning
 PORT=9999
@@ -207,14 +248,11 @@ curl https://api.yourdomain.com/api/health
 
 ## Troubleshooting
 
-**502 Bad Gateway**
-→ Backend isn't running. Check logs: `docker logs api`
+**502 Bad Gateway** → Backend isn't running. Check logs: `docker logs api`
 
-**CORS errors**
-→ Make sure `FRONTEND_URL` matches exactly (including https)
+**CORS errors** → Make sure `FRONTEND_URL` matches exactly (including https)
 
-**Auth not working**
-→ Check `BETTER_AUTH_URL` matches your API domain
+**Auth not working** → Check `BETTER_AUTH_URL` matches your API domain
 
-**Database connection refused**
-→ Whitelist your server IP in your database provider's dashboard
+**Database connection refused** → Whitelist your server IP in your database
+provider's dashboard

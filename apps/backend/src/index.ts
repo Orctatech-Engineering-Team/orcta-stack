@@ -1,23 +1,23 @@
-import { serve } from "@hono/node-server";
 import app from "@/app";
 import env from "@/env";
 
-const server = serve({
-	fetch: app.fetch,
-	port: env.PORT,
-});
-
 console.log(`Server running at http://localhost:${env.PORT}`);
-console.log(`📚 API docs at http://localhost:${env.PORT}/docs`);
+console.log(`API docs at http://localhost:${env.PORT}/docs`);
+
+const abortController = new AbortController();
+
+Deno.serve(
+  { port: env.PORT, signal: abortController.signal },
+  (req) => app.fetch(req),
+);
 
 // Graceful shutdown
 const shutdown = () => {
-	console.log("\n Shutting down gracefully...");
-	server.close(() => {
-		console.log("✅ Server closed");
-		process.exit(0);
-	});
+  console.log("\n Shutting down gracefully...");
+  abortController.abort();
+  console.log("✅ Server closed");
+  Deno.exit(0);
 };
 
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
+Deno.addSignalListener("SIGTERM", shutdown);
+Deno.addSignalListener("SIGINT", shutdown);

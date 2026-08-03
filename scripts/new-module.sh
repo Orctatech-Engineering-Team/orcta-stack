@@ -43,7 +43,6 @@ PASCAL=$(echo "$MODULE" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(su
 echo -e "\n${BOLD}Scaffolding module: ${MODULE}${RESET} (tags: ${PASCAL})\n"
 
 # ── Directory structure ─────────────────────────────────────────────────────────
-mkdir -p "${MODULE_DIR}/usecases"
 mkdir -p "${MODULE_DIR}/__tests__"
 success "Created directory structure"
 
@@ -117,8 +116,8 @@ export async function findAll(): Promise<
 EOF
 success "${MODULE}.repository.ts"
 
-# ── usecases/${MODULE}.usecases.ts ─────────────────────────────────────────────
-cat > "${MODULE_DIR}/usecases/${MODULE}.usecases.ts" << EOF
+# ── ${MODULE}.usecases.ts ──────────────────────────────────────────────────────
+cat > "${MODULE_DIR}/${MODULE}.usecases.ts" << EOF
 // Use-cases: functional core.
 //
 // Pure functions that receive already-loaded domain values and apply business rules.
@@ -131,7 +130,7 @@ cat > "${MODULE_DIR}/usecases/${MODULE}.usecases.ts" << EOF
 //   return ok(input);
 // }
 EOF
-success "usecases/${MODULE}.usecases.ts"
+success "${MODULE}.usecases.ts"
 
 # ── handlers.ts ────────────────────────────────────────────────────────────────
 cat > "${MODULE_DIR}/handlers.ts" << EOF
@@ -190,7 +189,7 @@ success "index.ts"
 
 # ── __tests__/handlers.test.ts ─────────────────────────────────────────────────
 cat > "${MODULE_DIR}/__tests__/handlers.test.ts" << EOF
-import { describe, it } from "vitest";
+import { describe, it } from "@std/testing/bdd";
 
 // Integration tests for the ${MODULE} handlers.
 // Import the router directly and use Hono's testClient to invoke routes
@@ -202,9 +201,9 @@ describe("${MODULE} handlers", () => {
 EOF
 success "__tests__/handlers.test.ts"
 
-# ── Auto-format with Biome ─────────────────────────────────────────────────────
-if command -v pnpm >/dev/null 2>&1 && [[ -f "biome.json" ]]; then
-  pnpm exec biome check --write "${MODULE_DIR}" >/dev/null 2>&1 && success "Biome formatting applied" || warn "Biome check had warnings (non-fatal)"
+# ── Auto-format with Deno ─────────────────────────────────────────────────────
+if command -v deno >/dev/null 2>&1; then
+  deno fmt "${MODULE_DIR}" >/dev/null 2>&1 && success "Deno formatting applied" || warn "Deno fmt had warnings (non-fatal)"
 fi
 
 # ── Next steps ─────────────────────────────────────────────────────────────────
@@ -225,6 +224,6 @@ echo    "  export const publicRoutes = [health, ${MODULE}];"
 echo ""
 echo -e "${BOLD}Then:${RESET}"
 echo    "  • Add your DB schema and table to packages/db/src/schema/"
-echo    "  • Run pnpm db:generate && pnpm db:migrate"
+echo    "  • Run deno task db:generate && deno task db:migrate"
 echo    "  • Flesh out ${MODULE}.repository.ts with real Drizzle queries"
-echo    "  • Add use-cases to usecases/${MODULE}.usecases.ts as logic grows"
+echo    "  • Add business logic to ${MODULE}.usecases.ts as needed"

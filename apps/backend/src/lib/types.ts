@@ -2,19 +2,19 @@ import type { RouteConfig, RouteHandler } from "@hono/zod-openapi";
 import type { ApiError, ApiSuccess } from "@repo/shared";
 import type { Context } from "hono";
 import type { ZodType } from "zod";
-import type { AppEnv } from "./create-app";
-import { InfrastructureError } from "./error";
+import type { AppEnv } from "./create-app.ts";
+import { InfrastructureError } from "./error.ts";
 
 /**
  * Shared API response types re-exported for handler convenience.
  */
 export type {
-	ApiError,
-	ApiResponse,
-	ApiSuccess,
-	Err,
-	Ok,
-	Result,
+  ApiError,
+  ApiResponse,
+  ApiSuccess,
+  Err,
+  Ok,
+  Result,
 } from "@repo/shared";
 
 /**
@@ -29,19 +29,19 @@ export { err, isErr, isOk, ok } from "@repo/shared";
  * from a single module.
  */
 export {
-	BAD_REQUEST,
-	CONFLICT,
-	CREATED,
-	FORBIDDEN,
-	INTERNAL_SERVER_ERROR,
-	NO_CONTENT,
-	NOT_FOUND,
-	OK,
-	SERVICE_UNAVAILABLE,
-	TOO_MANY_REQUESTS,
-	UNAUTHORIZED,
-	UNPROCESSABLE_ENTITY,
-} from "./http-status-codes";
+  BAD_REQUEST,
+  CONFLICT,
+  CREATED,
+  FORBIDDEN,
+  INTERNAL_SERVER_ERROR,
+  NO_CONTENT,
+  NOT_FOUND,
+  OK,
+  SERVICE_UNAVAILABLE,
+  TOO_MANY_REQUESTS,
+  UNAUTHORIZED,
+  UNPROCESSABLE_ENTITY,
+} from "./http-status-codes.ts";
 
 /**
  * Strongly typed route handler bound to the application environment.
@@ -60,10 +60,10 @@ export type AppRouteHandler<R extends RouteConfig> = RouteHandler<R, AppEnv>;
  * 200: jsonRes(userSchema, "User retrieved")
  */
 export function jsonRes<S extends ZodType>(schema: S, description: string) {
-	return {
-		content: { "application/json": { schema } },
-		description,
-	} as const;
+  return {
+    content: { "application/json": { schema } },
+    description,
+  } as const;
 }
 
 /**
@@ -75,9 +75,9 @@ export function jsonRes<S extends ZodType>(schema: S, description: string) {
  * body: jsonBody(createUserSchema)
  */
 export function jsonBody<S extends ZodType>(schema: S) {
-	return {
-		content: { "application/json": { schema } },
-	} as const;
+  return {
+    content: { "application/json": { schema } },
+  } as const;
 }
 
 /**
@@ -86,7 +86,7 @@ export function jsonBody<S extends ZodType>(schema: S) {
  * @param data - Response payload
  */
 export function success<T>(data: T): ApiSuccess<T> {
-	return { success: true, data };
+  return { success: true, data };
 }
 
 /**
@@ -95,11 +95,11 @@ export function success<T>(data: T): ApiSuccess<T> {
  * @param error - Machine-readable error payload
  */
 export function failure(error: {
-	code: string;
-	message: string;
-	details?: Record<string, unknown>;
+  code: string;
+  message: string;
+  details?: Record<string, unknown>;
 }): ApiError {
-	return { success: false, error };
+  return { success: false, error };
 }
 
 /**
@@ -109,7 +109,7 @@ export function failure(error: {
  * from domain/business rule errors.
  */
 export const isInfraError = (e: unknown): e is InfrastructureError =>
-	e instanceof InfrastructureError;
+  e instanceof InfrastructureError;
 
 /**
  * WideEvent
@@ -121,82 +121,82 @@ export const isInfraError = (e: unknown): e is InfrastructureError =>
  * wide-event middleware.
  */
 export type WideEvent = {
-	/** Unique request identifier */
-	request_id?: string;
+  /** Unique request identifier */
+  request_id?: string;
 
-	/**
-	 * Trace identifier for cross-service correlation.
-	 *
-	 * Forwarded from `x-trace-id` when present, otherwise defaults
-	 * to `request_id`.
-	 */
-	trace_id?: string;
+  /**
+   * Trace identifier for cross-service correlation.
+   *
+   * Forwarded from `x-trace-id` when present, otherwise defaults
+   * to `request_id`.
+   */
+  trace_id?: string;
 
-	/** ISO timestamp */
-	timestamp?: string;
+  /** ISO timestamp */
+  timestamp?: string;
 
-	/** HTTP method */
-	method?: string;
+  /** HTTP method */
+  method?: string;
 
-	/** Request path */
-	path?: string;
+  /** Request path */
+  path?: string;
 
-	/** Final HTTP status code */
-	status_code?: number;
+  /** Final HTTP status code */
+  status_code?: number;
 
-	/** Request duration in milliseconds */
-	duration_ms?: number;
+  /** Request duration in milliseconds */
+  duration_ms?: number;
 
-	/** Request outcome classification */
-	outcome?: "success" | "error";
+  /** Request outcome classification */
+  outcome?: "success" | "error";
 
-	/** Logical service name */
-	service?: string;
+  /** Logical service name */
+  service?: string;
 
-	/** Code/service version */
-	service_version?: string;
+  /** Code/service version */
+  service_version?: string;
 
-	/**
-	 * Deployment identifier.
-	 *
-	 * Typically a Docker image tag or Git SHA. Distinct from
-	 * `service_version`.
-	 */
-	deployment_id?: string;
+  /**
+   * Deployment identifier.
+   *
+   * Typically a Docker image tag or Git SHA. Distinct from
+   * `service_version`.
+   */
+  deployment_id?: string;
 
-	/** Execution region */
-	region?: string;
+  /** Execution region */
+  region?: string;
 
-	/** Client IP address */
-	ip?: string;
+  /** Client IP address */
+  ip?: string;
 
-	/** Client user agent */
-	user_agent?: string;
+  /** Client user agent */
+  user_agent?: string;
 
-	/** Session identifier */
-	session_id?: string;
+  /** Session identifier */
+  session_id?: string;
 
-	/** Authenticated user context */
-	user?: {
-		id: string;
-		role: string;
-		[k: string]: unknown;
-	};
+  /** Authenticated user context */
+  user?: {
+    id: string;
+    role: string;
+    [k: string]: unknown;
+  };
 
-	/** Error metadata */
-	error?: {
-		type?: string;
-		message?: string;
-		code?: string;
-		retriable?: boolean;
-		[k: string]: unknown;
-	};
+  /** Error metadata */
+  error?: {
+    type?: string;
+    message?: string;
+    code?: string;
+    retriable?: boolean;
+    [k: string]: unknown;
+  };
 
-	/** Feature flag snapshot */
-	feature_flags?: Record<string, boolean>;
+  /** Feature flag snapshot */
+  feature_flags?: Record<string, boolean>;
 
-	/** Arbitrary handler-defined fields */
-	[key: string]: unknown;
+  /** Arbitrary handler-defined fields */
+  [key: string]: unknown;
 };
 
 /**
@@ -209,9 +209,9 @@ export type WideEvent = {
  * @param fields - Partial event fields to merge
  */
 export function addToEvent(
-	c: Context<AppEnv>,
-	fields: Partial<WideEvent>,
+  c: Context<AppEnv>,
+  fields: Partial<WideEvent>,
 ): void {
-	const event = c.get("wideEvent");
-	if (event) Object.assign(event, fields);
+  const event = c.get("wideEvent");
+  if (event) Object.assign(event, fields);
 }

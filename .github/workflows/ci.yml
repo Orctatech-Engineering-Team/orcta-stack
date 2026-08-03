@@ -7,7 +7,7 @@ on:
     branches: [master]
 
 jobs:
-  check:
+  backend:
     runs-on: ubuntu-latest
 
     services:
@@ -38,34 +38,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - uses: denoland/setup-deno@v2
         with:
-          version: 9.15.0
+          # 2.9.0, not 2.7.14 (what the Dockerfiles pin) — the Node-compat
+          # layer needed for jsdom's undici dependency to work isn't present
+          # until 2.8.0. Test-tooling only; production images are unaffected
+          # since they never run `deno test`.
+          deno-version: "2.9.0"
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
+      - name: Cache dependencies
+        run: deno cache apps/backend/src/index.ts apps/backend/src/jobs/worker.ts
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build packages
-        run: pnpm build:packages
+      - name: Format check
+        run: deno fmt --check
 
       - name: Lint
-        run: pnpm lint
+        # Excludes apps/frontend — Biome is the linter of record for it,
+        # checked in the frontend job. Avoids double-linting the same files
+        # with two different rulesets.
+        run: deno lint --ignore=apps/frontend
 
       - name: Type check
-        run: pnpm typecheck
+        run: deno check apps/backend/src/index.ts
 
       - name: Run migrations
-        run: pnpm --filter @repo/db db:push:ci
+        run: deno run --allow-env --allow-net --allow-read --allow-sys apps/backend/src/db/migrate.ts
         env:
           DATABASE_URL: postgres://test:test@localhost:5432/test
 
       - name: Test
-        run: pnpm test
+        # Excludes apps/frontend deliberately — its jsdom-based tests run in
+        # the frontend job, in a separate process. A frontend DOM-testing
+        # crash previously took down unrelated backend test results by
+        # corrupting the shared fetch/undici runtime when run in the same
+        # `deno test` invocation.
+        run: deno test -A --ignore=apps/frontend
         env:
           NODE_ENV: test
           DATABASE_URL: postgres://test:test@localhost:5432/test
@@ -73,4 +80,33 @@ jobs:
           BETTER_AUTH_SECRET: test-secret-for-ci-at-least-32-chars
           BETTER_AUTH_URL: http://localhost:9999
           SERVER_URL: http://localhost:9999
-          FRONTEND_URL: http://localhost:5173
+          FRONTEND_URL: http://localhost:3000
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.9.0"
+
+      - name: Install frontend dependencies
+        working-directory: apps/frontend
+        run: deno install
+
+      - name: Frontend lint
+        run: deno run -A npm:@biomejs/biome@2.3.7 ci apps/frontend
+
+      - name: Frontend type check
+        working-directory: apps/frontend
+        run: deno task typecheck
+
+      - name: Frontend build
+        working-directory: apps/frontend
+        run: deno task build
+
+      - name: Frontend test
+        working-directory: apps/frontend
+        run: deno task test

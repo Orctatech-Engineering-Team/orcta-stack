@@ -3,8 +3,8 @@ import { z } from "zod";
 // ─── Pagination ──────────────────────────────────────────────────────────────
 
 export const paginationSchema = z.object({
-	page: z.coerce.number().int().positive().default(1),
-	limit: z.coerce.number().int().positive().max(100).default(20),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
 });
 
 export type PaginationInput = z.infer<typeof paginationSchema>;
@@ -17,10 +17,10 @@ export type PaginationInput = z.infer<typeof paginationSchema>;
  *   const rows = await db.query.posts.findMany({ limit, offset });
  */
 export function paginationQuery(input: PaginationInput) {
-	return {
-		limit: input.limit,
-		offset: (input.page - 1) * input.limit,
-	};
+  return {
+    limit: input.limit,
+    offset: (input.page - 1) * input.limit,
+  };
 }
 
 /**
@@ -35,21 +35,21 @@ export function paginationQuery(input: PaginationInput) {
  *   return c.json(success(paginate(rows, Number(count), input)), OK);
  */
 export function paginate<T>(items: T[], total: number, input: PaginationInput) {
-	return {
-		items,
-		meta: {
-			page: input.page,
-			limit: input.limit,
-			total,
-			totalPages: Math.ceil(total / input.limit),
-			hasMore: input.page * input.limit < total,
-		},
-	};
+  return {
+    items,
+    meta: {
+      page: input.page,
+      limit: input.limit,
+      total,
+      totalPages: Math.ceil(total / input.limit),
+      hasMore: input.page * input.limit < total,
+    },
+  };
 }
 
 // Common params
 export const idParamSchema = z.object({
-	id: z.string().min(1),
+  id: z.string().min(1),
 });
 
 // Type exports
@@ -70,19 +70,19 @@ export type IdParam = z.infer<typeof idParamSchema>;
 
 // Wraps any data schema in { success: true, data: T }.
 export const apiSuccessSchema = <T extends z.ZodTypeAny>(dataSchema: T) =>
-	z.object({
-		success: z.literal(true),
-		data: dataSchema,
-	});
+  z.object({
+    success: z.literal(true),
+    data: dataSchema,
+  });
 
 // Fixed shape for all error responses: { success: false, error: { code, message, details? } }.
 export const apiErrorSchema = z.object({
-	success: z.literal(false),
-	error: z.object({
-		code: z.string(),
-		message: z.string(),
-		details: z.record(z.string(), z.unknown()).optional(),
-	}),
+  success: z.literal(false),
+  error: z.object({
+    code: z.string(),
+    message: z.string(),
+    details: z.record(z.string(), z.unknown()).optional(),
+  }),
 });
 
 /**
@@ -95,15 +95,15 @@ export const apiErrorSchema = z.object({
  *   }
  */
 export const paginatedSuccessSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
-	apiSuccessSchema(
-		z.object({
-			items: z.array(itemSchema),
-			meta: z.object({
-				page: z.number(),
-				limit: z.number(),
-				total: z.number(),
-				totalPages: z.number(),
-				hasMore: z.boolean(),
-			}),
-		}),
-	);
+  apiSuccessSchema(
+    z.object({
+      items: z.array(itemSchema),
+      meta: z.object({
+        page: z.number(),
+        limit: z.number(),
+        total: z.number(),
+        totalPages: z.number(),
+        hasMore: z.boolean(),
+      }),
+    }),
+  );

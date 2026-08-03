@@ -136,7 +136,7 @@ export const andThen = <T, E, U, F>(
 export const andThenAsync = async <T, E, U, F>(
   result: Result<T, E>,
   fn: (value: T) => Promise<Result<U, F>>,
-): Promise<Result<U, E | F>> => (result.ok ? fn(result.value) : result);
+): Promise<Result<U, E | F>> => (result.ok ? await fn(result.value) : result);
 
 /**
  * Exhaustively handle both branches in a single expression.

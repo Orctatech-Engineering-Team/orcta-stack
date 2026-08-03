@@ -1,42 +1,49 @@
-# Build stage
-FROM node:20-alpine AS builder
-RUN corepack enable pnpm
+# ─── Build ─────────────────────────────────────────────────────────────
+FROM denoland/deno:debian-2.7.14 AS builder
 
 WORKDIR /app
 
-# Copy workspace files
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY tsconfig.base.json ./
-COPY packages ./packages
-COPY apps/backend ./apps/backend
+# Layer 1: Configuration (changes infrequently — preserves dep cache)
+COPY deno.json deno.lock ./
+COPY apps/backend/deno.json ./apps/backend/
+COPY apps/frontend/deno.json ./apps/frontend/
+COPY packages/shared/deno.json ./packages/shared/
+COPY packages/db/deno.json ./packages/db/
+COPY packages/email-templates/deno.json ./packages/email-templates/
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Layer 2: Shared packages (change less often than app code)
+COPY packages/shared/ ./packages/shared/
+COPY packages/db/ ./packages/db/
+COPY packages/email-templates/ ./packages/email-templates/
 
-# Build packages and backend
-RUN pnpm build:packages
-RUN pnpm --filter backend build
+# Layer 3: Application source
+COPY apps/backend/ ./apps/backend/
 
-# Produce a flat, symlink-free node_modules for the backend only.
-# This is the canonical pnpm approach for Docker — avoids broken symlinks
-# when the workspace virtual store is copied without its sibling package dirs.
-RUN pnpm --filter backend deploy --prod /app/deploy
+# Cache dependencies (uses lockfile + import maps for npm resolution)
+RUN deno cache apps/backend/src/index.ts
 
-# Production stage
-FROM node:20-alpine AS runner
+# Compile to standalone binary (includes Deno runtime + all deps)
+RUN deno compile \
+  --allow-env \
+  --allow-net \
+  --allow-read \
+  --allow-sys \
+  --allow-ffi \
+  --output /usr/local/bin/orcta-backend \
+  apps/backend/src/index.ts
 
-WORKDIR /app
+# ─── Run ──────────────────────────────────────────────────────────────
+FROM alpine:3.20
 
-# Compiled application sources
-COPY --from=builder /app/apps/backend/dist ./
-# Flat node_modules from pnpm deploy (includes all workspace packages resolved)
-COPY --from=builder /app/deploy/node_modules ./node_modules
-# SQL migration files (needed by src/db/migrate.js at runtime)
-COPY --from=builder /app/packages/db/migrations ./migrations
+RUN apk add --no-cache ca-certificates && \
+  addgroup -S app && adduser -S app -G app
 
-ENV NODE_ENV=production
+COPY --from=builder /usr/local/bin/orcta-backend /usr/local/bin/orcta-backend
+
+USER app
+
 ENV PORT=9999
 
 EXPOSE 9999
 
-CMD ["node", "src/index.js"]
+CMD ["orcta-backend"]
