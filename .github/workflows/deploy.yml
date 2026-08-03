@@ -133,8 +133,10 @@ jobs:
 
             docker compose --env-file .env.production -f docker-compose.prod.yml ps
 
-            # Run database migrations
-            IMAGE_TAG=latest docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend deno run --allow-env --allow-net --allow-read --allow-sys apps/backend/src/db/migrate.ts
+            # Run database migrations (deno image with the repo checkout
+            # mounted — the compiled backend image has no deno executable
+            # or source tree to run migrate.ts from)
+            IMAGE_TAG=latest docker compose --env-file .env.production -f docker-compose.prod.yml run --rm migrate
 
             # Recreate backend and frontend
             IMAGE_TAG=latest docker compose --env-file .env.production -f docker-compose.prod.yml up -d backend frontend

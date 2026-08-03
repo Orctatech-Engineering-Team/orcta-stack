@@ -53,6 +53,32 @@ services:
       redis:
         condition: service_healthy
 
+  # Runs migrations from the repo checkout on the VPS. The backend image
+  # (orcta-backend) is a compiled standalone binary on bare alpine — no deno
+  # executable, no source tree — so it can't run migrate.ts itself. This
+  # service uses the same Deno base image the backend Dockerfile builds
+  # with, mounting the deploy directory instead of baking source into an
+  # image. Opt-in only (profiles) — never starts via `docker compose up`.
+  migrate:
+    image: denoland/deno:debian-2.7.14
+    working_dir: /app
+    volumes:
+      - .:/app
+    env_file: .env.production
+    depends_on:
+      db:
+        condition: service_healthy
+    command: [
+      "deno",
+      "run",
+      "--allow-env",
+      "--allow-net",
+      "--allow-read",
+      "--allow-sys",
+      "apps/backend/src/db/migrate.ts",
+    ]
+    profiles: ["tools"]
+
 volumes:
   postgres_data:
   redis_data:
