@@ -68,7 +68,8 @@ Open [localhost:3000](http://localhost:3000). You're live.
 ```bash
 deno task dev           # Run backend
 deno task dev:frontend  # Run frontend
-deno test -A            # Run tests
+deno test -A            # Run backend + shared/db/email-templates tests
+deno task test:frontend # Run frontend tests
 deno lint               # Check code
 deno check              # Check types
 ```

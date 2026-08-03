@@ -13,7 +13,11 @@
     "dev": "deno run -A npm:vite dev --port 3000",
     "build": "deno run -A npm:vite build",
     "preview": "deno run -A npm:vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "deno test -A"
+  },
+  "test": {
+    "include": ["src/**/*.test.ts", "src/**/*.test.tsx"]
   },
   "lint": {
     "rules": {

@@ -31,9 +31,11 @@
 	},
 	"devDependencies": {
 		"@tanstack/router-plugin": "^1.134.14",
+		"@testing-library/react": "^16.3.2",
 		"@types/react": "^19.1.16",
 		"@types/react-dom": "^19.1.9",
 		"@vitejs/plugin-react": "^5.0.4",
+		"jsdom": "^30.0.1",
 		"typescript": "~5.9.3",
 		"vite": "^7.1.7"
 	}
