@@ -19,5 +19,8 @@
     "rules": {
       "exclude": ["no-slow-types"]
     }
+  },
+  "test": {
+    "include": ["src/**/*.test.ts"]
   }
 }

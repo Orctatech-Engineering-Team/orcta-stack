@@ -2,6 +2,7 @@ import { boolean, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 
 export const userRoleEnum = pgEnum("user_role", ["buyer", "seller", "admin"]);
+export type UserRole = (typeof userRoleEnum.enumValues)[number];
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
