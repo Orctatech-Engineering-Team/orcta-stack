@@ -138,15 +138,15 @@ describe("andThen", () => {
 
 describe("andThenAsync", () => {
   it("chains an async function on an Ok result", async () => {
-    const result = await andThenAsync(ok(5), async (n) => ok(n * 2));
+    const result = await andThenAsync(ok(5), (n) => Promise.resolve(ok(n * 2)));
     expect(result).toEqual(ok(10));
   });
 
   it("short-circuits on an Err result without calling the function", async () => {
     let called = false;
-    const fn = async () => {
+    const fn = () => {
       called = true;
-      return ok(0);
+      return Promise.resolve(ok(0));
     };
     const result = await andThenAsync(err("already failed"), fn);
     expect(result).toEqual(err("already failed"));
@@ -156,7 +156,7 @@ describe("andThenAsync", () => {
   it("propagates an async Err from the chained function", async () => {
     const result = await andThenAsync(
       ok("user"),
-      async (_) => err({ type: "CONFLICT", detail: "duplicate" }),
+      (_) => Promise.resolve(err({ type: "CONFLICT", detail: "duplicate" })),
     );
     expect(result).toEqual(err({ type: "CONFLICT", detail: "duplicate" }));
   });

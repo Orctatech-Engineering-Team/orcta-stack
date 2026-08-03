@@ -35,7 +35,7 @@ interface DownloadOptions {
 /**
  * Generate presigned URL for uploading
  */
-export async function getUploadUrl({
+export function getUploadUrl({
   key,
   contentType,
   expiresIn = 3600,
@@ -51,7 +51,7 @@ export async function getUploadUrl({
 /**
  * Generate presigned URL for downloading
  */
-export async function getDownloadUrl({
+export function getDownloadUrl({
   key,
   expiresIn = 3600,
 }: DownloadOptions): Promise<string> {

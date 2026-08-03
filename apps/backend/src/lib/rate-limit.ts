@@ -38,7 +38,7 @@ export function rateLimit(options: RateLimitOptions = {}) {
       ),
   } = options;
 
-  return async (c: Context, next: Next) => {
+  return (c: Context, next: Next) => {
     const key = keyGenerator(c);
     const now = Date.now();
     const entry = store.get(key);

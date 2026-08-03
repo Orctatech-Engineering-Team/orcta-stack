@@ -28,6 +28,6 @@ export const healthCheckHandler: AppRouteHandler<HealthCheckRoute> = async (
   return c.json(success(data), databaseUp ? OK : SERVICE_UNAVAILABLE);
 };
 
-export const pingHandler: AppRouteHandler<PingRoute> = async (c) => {
+export const pingHandler: AppRouteHandler<PingRoute> = (c) => {
   return c.json(success({ message: "pong" as const }), OK);
 };

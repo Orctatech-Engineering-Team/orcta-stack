@@ -122,26 +122,32 @@ describe("andThen", () => {
 
 describe("andThenAsync", () => {
   it("chains the async function when Ok", async () => {
-    const result = await andThenAsync(ok(5), async (n) => ok(n * 2));
+    const result = await andThenAsync(ok(5), (n) => Promise.resolve(ok(n * 2)));
     expect(result).toEqual(ok(10));
   });
 
   it("short-circuits when the input is Err", async () => {
     const original = err("input failed");
-    const result = await andThenAsync(original, async (n: number) => ok(n));
+    const result = await andThenAsync(
+      original,
+      (n: number) => Promise.resolve(ok(n)),
+    );
     expect(result).toEqual(original);
   });
 
   it("propagates Err returned by the async function", async () => {
-    const result = await andThenAsync(ok("x"), async () => err("async failed"));
+    const result = await andThenAsync(
+      ok("x"),
+      () => Promise.resolve(err("async failed")),
+    );
     expect(result).toEqual(err("async failed"));
   });
 
   it("does not call fn on Err input", async () => {
     let called = false;
-    await andThenAsync(err("e"), async () => {
+    await andThenAsync(err("e"), () => {
       called = true;
-      return ok(0);
+      return Promise.resolve(ok(0));
     });
     expect(called).toBe(false);
   });
